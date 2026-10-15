@@ -513,8 +513,13 @@
           <p>Jika Anda atau seseorang yang Anda kenal berada dalam krisis mental darurat, segera hubungi 119 atau layanan darurat terdekat.</p>
         </div>
       </div>
-      <div class="mt-8 pt-6 border-t border-oase-border/80 text-center text-xs text-oase-muted">
-        &copy; 2026 OASE Cerita. Seluruh Hak Cipta Dilindungi.
+      <div class="mt-8 pt-6 border-t border-oase-border/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-center text-xs text-oase-muted">
+        <div>&copy; 2026 OASE Cerita. Seluruh Hak Cipta Dilindungi.</div>
+        <div class="flex items-center gap-3 text-[11px] font-semibold text-heather-700">
+          <a href="laman-konselor.html" class="hover:underline">Portal Konselor</a>
+          <span>•</span>
+          <a href="laman-moderator.html" class="hover:underline text-rose-700">Portal Moderator</a>
+        </div>
       </div>
     </div>
   </footer>
@@ -536,12 +541,32 @@
         <p class="text-xs text-heather-600 font-semibold mt-0.5">OASE Cerita - Obrolan Aman Seputar Emosi</p>
       </div>
 
+      <!-- Dual Role Selection: User Biasa vs Moderator -->
+      <div class="p-1 rounded-2xl bg-heather-50 border border-heather-200 grid grid-cols-2 gap-1 mb-3">
+        <button type="button" id="roleTabUser" class="py-2 px-3 rounded-xl text-xs font-bold bg-white text-heather-700 shadow-sm transition-all flex items-center justify-center gap-1.5 border border-heather-200">
+          <i data-lucide="user" class="w-3.5 h-3.5"></i>
+          <span>User Biasa</span>
+        </button>
+        <button type="button" id="roleTabMod" class="py-2 px-3 rounded-xl text-xs font-bold text-oase-muted hover:text-rose-700 transition-all flex items-center justify-center gap-1.5">
+          <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+          <span>Moderator</span>
+        </button>
+      </div>
+
+      <!-- Keterangan Mode Peran Aktif -->
+      <div id="roleHelpNotice" class="p-2.5 rounded-xl bg-heather-50 border border-heather-200 text-[11px] text-heather-900 flex items-start gap-2 mb-3">
+        <i data-lucide="info" class="w-3.5 h-3.5 text-heather-600 flex-shrink-0 mt-0.5"></i>
+        <span id="roleHelpText">
+          <strong>Mode Pengguna Biasa:</strong> Masuk sebagai siswa untuk membaca, membagikan cerita, atau curhat ke konselor.
+        </span>
+      </div>
+
       <!-- Auth Mode Switch Tabs -->
-      <div class="flex rounded-xl bg-heather-50 p-1 mb-5 border border-heather-100">
-        <button type="button" id="tabLogin" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white text-heather-700 shadow-sm transition-all">
+      <div class="flex rounded-xl bg-heather-50 p-1 mb-4 border border-heather-100">
+        <button type="button" id="tabLogin" class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-white text-heather-700 shadow-sm transition-all">
           Masuk
         </button>
-        <button type="button" id="tabRegister" class="flex-1 py-2 text-xs font-bold rounded-lg text-oase-muted hover:text-heather-700 transition-all">
+        <button type="button" id="tabRegister" class="flex-1 py-1.5 text-xs font-bold rounded-lg text-oase-muted hover:text-heather-700 transition-all">
           Daftar Akun
         </button>
       </div>
@@ -564,6 +589,13 @@
         <button type="submit" id="authSubmitBtn" class="w-full py-3 rounded-xl bg-heather-500 hover:bg-heather-600 text-white font-bold text-sm shadow-md shadow-heather-500/20 transition-all duration-200 flex items-center justify-center gap-2">
           <span>Masuk & Mulai Bercerita</span>
         </button>
+
+        <div class="pt-2 border-t border-heather-100 flex items-center justify-between text-[11px] text-oase-muted">
+          <span>Akun terhubung ke Supabase</span>
+          <button type="button" id="fillDemoAuthBtn" class="text-heather-600 font-bold hover:underline">
+            Isi Akun Demo
+          </button>
+        </div>
       </form>
     </div>
   </div>

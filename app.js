@@ -18,7 +18,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const authModalTitle = document.getElementById('authModalTitle');
   const tabLogin = document.getElementById('tabLogin');
   const tabRegister = document.getElementById('tabRegister');
+  const roleTabUser = document.getElementById('roleTabUser');
+  const roleTabMod = document.getElementById('roleTabMod');
+  const roleHelpNotice = document.getElementById('roleHelpNotice');
+  const roleHelpText = document.getElementById('roleHelpText');
+  const fillDemoAuthBtn = document.getElementById('fillDemoAuthBtn');
   let authMode = 'login'; // 'login' or 'register'
+  let authRole = 'user'; // 'user' or 'moderator'
 
   // Navbar Session State Elements
   const guestControls = document.getElementById('guestControls');
@@ -140,6 +146,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ==========================================
   // 3. AUTH LOGIC & TABS
   // ==========================================
+  const setAuthRole = (role) => {
+    authRole = role;
+    clearAuthFeedback();
+    if (role === 'user') {
+      if (roleTabUser) roleTabUser.className = "py-2 px-3 rounded-xl text-xs font-bold bg-white text-heather-700 shadow-sm transition-all flex items-center justify-center gap-1.5 border border-heather-200";
+      if (roleTabMod) roleTabMod.className = "py-2 px-3 rounded-xl text-xs font-bold text-oase-muted hover:text-rose-700 transition-all flex items-center justify-center gap-1.5";
+      if (roleHelpNotice) roleHelpNotice.className = "p-2.5 rounded-xl bg-heather-50 border border-heather-200 text-[11px] text-heather-900 flex items-start gap-2 mb-3";
+      if (roleHelpText) roleHelpText.innerHTML = "<strong>Mode Pengguna Biasa:</strong> Masuk sebagai siswa untuk membaca, membagikan cerita, atau curhat ke konselor.";
+      if (authSubmitBtn) {
+        authSubmitBtn.className = "w-full py-3 rounded-xl bg-heather-500 hover:bg-heather-600 text-white font-bold text-sm shadow-md shadow-heather-500/20 transition-all duration-200 flex items-center justify-center gap-2";
+        authSubmitBtn.querySelector('span').textContent = authMode === 'login' ? 'Masuk & Mulai Bercerita' : 'Daftarkan Akun OASE';
+      }
+    } else {
+      if (roleTabMod) roleTabMod.className = "py-2 px-3 rounded-xl text-xs font-bold bg-white text-rose-700 shadow-sm transition-all flex items-center justify-center gap-1.5 border border-rose-200";
+      if (roleTabUser) roleTabUser.className = "py-2 px-3 rounded-xl text-xs font-bold text-oase-muted hover:text-heather-700 transition-all flex items-center justify-center gap-1.5";
+      if (roleHelpNotice) roleHelpNotice.className = "p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-950 flex items-start gap-2 mb-3";
+      if (roleHelpText) roleHelpText.innerHTML = "<strong>Mode Moderator:</strong> Masuk sebagai moderator untuk mengawasi ruang aman, menerima notifikasi SARA, dan mengelola komunitas.";
+      if (authSubmitBtn) {
+        authSubmitBtn.className = "w-full py-3 rounded-xl bg-gradient-to-r from-rose-600 to-heather-600 hover:from-rose-700 hover:to-heather-700 text-white font-bold text-sm shadow-md shadow-rose-500/20 transition-all duration-200 flex items-center justify-center gap-2";
+        authSubmitBtn.querySelector('span').textContent = authMode === 'login' ? 'Masuk ke Laman Moderator' : 'Daftar Akun Moderator';
+      }
+    }
+  };
+
+  if (roleTabUser) roleTabUser.addEventListener('click', () => setAuthRole('user'));
+  if (roleTabMod) roleTabMod.addEventListener('click', () => setAuthRole('moderator'));
+
+  if (fillDemoAuthBtn) {
+    fillDemoAuthBtn.addEventListener('click', () => {
+      if (authRole === 'moderator') {
+        authEmail.value = 'moderator@oase.id';
+        authPassword.value = 'moderator123';
+      } else {
+        authEmail.value = 'siswa@oase.id';
+        authPassword.value = 'siswa123';
+      }
+    });
+  }
+
   const setAuthMode = (mode) => {
     authMode = mode;
     clearAuthFeedback();
@@ -149,14 +194,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       tabRegister.classList.remove('bg-white', 'text-heather-700', 'shadow-sm');
       tabRegister.classList.add('text-oase-muted');
       authModalTitle.textContent = 'Selamat Datang';
-      authSubmitBtn.querySelector('span').textContent = 'Masuk & Mulai Bercerita';
+      authSubmitBtn.querySelector('span').textContent = authRole === 'moderator' ? 'Masuk ke Laman Moderator' : 'Masuk & Mulai Bercerita';
     } else {
       tabRegister.classList.add('bg-white', 'text-heather-700', 'shadow-sm');
       tabRegister.classList.remove('text-oase-muted');
       tabLogin.classList.remove('bg-white', 'text-heather-700', 'shadow-sm');
       tabLogin.classList.add('text-oase-muted');
-      authModalTitle.textContent = 'Daftar Akun Baru';
-      authSubmitBtn.querySelector('span').textContent = 'Daftarkan Akun OASE';
+      authModalTitle.textContent = authRole === 'moderator' ? 'Daftar Akun Moderator' : 'Daftar Akun Baru';
+      authSubmitBtn.querySelector('span').textContent = authRole === 'moderator' ? 'Daftar Akun Moderator' : 'Daftarkan Akun OASE';
     }
   };
 
@@ -216,18 +261,40 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         if (authMode === 'login') {
           await window.AuthService.signIn(email, password);
-          localStorage.setItem('oase_active_user_email', email);
-          showAuthFeedback('Berhasil masuk! Membuka dashboard siswa...', 'success');
-          setTimeout(() => {
-            closeAuthModal();
-            authForm.reset();
-            const targetUrl = sessionStorage.getItem('oase_auth_redirect') || 'dashboard-user.html';
-            sessionStorage.removeItem('oase_auth_redirect');
-            window.location.href = targetUrl;
-          }, 800);
+          if (authRole === 'moderator') {
+            localStorage.setItem('oase_active_moderator_email', email);
+            showAuthFeedback('Berhasil masuk sebagai Moderator! Mengalihkan ke Laman Moderator...', 'success');
+            setTimeout(() => {
+              closeAuthModal();
+              authForm.reset();
+              window.location.href = 'laman-moderator.html';
+            }, 800);
+            return;
+          } else {
+            localStorage.setItem('oase_active_user_email', email);
+            showAuthFeedback('Berhasil masuk! Membuka dashboard siswa...', 'success');
+            setTimeout(() => {
+              closeAuthModal();
+              authForm.reset();
+              const targetUrl = sessionStorage.getItem('oase_auth_redirect') || 'dashboard-user.html';
+              sessionStorage.removeItem('oase_auth_redirect');
+              window.location.href = targetUrl;
+            }, 800);
+          }
         } else {
           await window.AuthService.signUp(email, password);
-          showAuthFeedback('Pendaftaran berhasil! Akun Anda telah aktif di database Supabase.', 'success');
+          if (authRole === 'moderator') {
+            const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
+            savedProfiles[email] = {
+              email,
+              display_name: email.split('@')[0],
+              role: 'moderator'
+            };
+            localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
+            showAuthFeedback('Pendaftaran moderator berhasil! Silakan masuk dengan akun Anda.', 'success');
+          } else {
+            showAuthFeedback('Pendaftaran berhasil! Akun Anda telah aktif di database Supabase.', 'success');
+          }
           setTimeout(() => {
             setAuthMode('login');
           }, 1500);
