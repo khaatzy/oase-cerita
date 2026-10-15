@@ -979,7 +979,7 @@
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>${s.user_email ? `<span class="text-[11px] font-semibold text-heather-600 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200" title="Email terdaftar siswa">${s.user_email}</span>` : '}
+                <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>${s.user_email ? `<span class="text-[11px] font-semibold text-heather-600 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200" title="Email terdaftar siswa">${s.user_email}</span>` : ''}
                 <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold">🔒 Anonim</span>
               </div>
               <p class="text-xs text-heather-700 font-semibold mt-0.5">Topik: ${s.topic}</p>
