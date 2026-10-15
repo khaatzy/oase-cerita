@@ -272,9 +272,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
           } catch (e) {}
 
-          const isMod = (profile && profile.role === 'moderator') || 
-                        email.toLowerCase().includes('moderator') || 
-                        email.toLowerCase().includes('admin');
+          const isMod = (window.AuthService && typeof window.AuthService.isModeratorEmail === 'function')
+            ? window.AuthService.isModeratorEmail(email, profile)
+            : ((profile && profile.role === 'moderator') || 
+               email.toLowerCase().includes('moderator') || 
+               email.toLowerCase().includes('admin'));
 
           if (!isMod) {
             await window.AuthService.signOut();

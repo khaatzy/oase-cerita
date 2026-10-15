@@ -436,6 +436,21 @@ const AuthService = {
     };
     localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
     return { success: true, status: 'pending' };
+  },
+
+  // Daftar Akun Moderator Resmi (Whitelist OASE)
+  MODERATORS_LIST: [
+    'moderator@oase.id',
+    'arkhanzaazs020911@gmail.com'
+  ],
+
+  // Cek apakah akun memiliki hak akses Moderator
+  isModeratorEmail(email, profile = null) {
+    if (!email) return false;
+    const lower = email.toLowerCase().trim();
+    if (profile && profile.role === 'moderator') return true;
+    if (lower.includes('moderator') || lower.includes('admin')) return true;
+    return this.MODERATORS_LIST.some(e => e.toLowerCase() === lower);
   }
 };
 

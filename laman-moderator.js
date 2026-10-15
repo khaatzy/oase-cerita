@@ -195,8 +195,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         profile = { email, display_name: email.split('@')[0], role: 'moderator' };
       }
 
-      // Jika role adalah moderator atau ada tanda aktif moderator
-      if (profile.role === 'moderator' || savedModEmail === email || email.toLowerCase().includes('moderator') || email.toLowerCase().includes('admin')) {
+      // Cek apakah akun memiliki wewenang moderator
+      const isAuthorizedMod = (window.AuthService && typeof window.AuthService.isModeratorEmail === 'function')
+        ? window.AuthService.isModeratorEmail(email, profile)
+        : (profile.role === 'moderator' || savedModEmail === email || email.toLowerCase().includes('moderator') || email.toLowerCase().includes('admin'));
+
+      if (isAuthorizedMod || savedModEmail === email) {
         currentModerator = {
           id: session.user.id,
           email: email,
@@ -343,9 +347,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
           } catch (e) {}
 
-          const isMod = (profile && profile.role === 'moderator') || 
-                        email.toLowerCase().includes('moderator') || 
-                        email.toLowerCase().includes('admin');
+          const isMod = (window.AuthService && typeof window.AuthService.isModeratorEmail === 'function')
+            ? window.AuthService.isModeratorEmail(email, profile)
+            : ((profile && profile.role === 'moderator') || 
+               email.toLowerCase().includes('moderator') || 
+               email.toLowerCase().includes('admin'));
 
           if (!isMod) {
             if (window.AuthService && typeof window.AuthService.signOut === 'function') {
