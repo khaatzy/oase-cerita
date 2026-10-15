@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peta Mood & Relaksasi - OASE Cerita</title>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            heather: {
+              50: '#FBF5F9',
+              100: '#F5EBF3',
+              200: '#EBD8E7',
+              300: '#DCB8D4',
+              400: '#C78CBB',
+              500: '#A14189', /* HEATHER MAUVE PRIMARY */
+              600: '#8E3476',
+              700: '#752A62',
+              800: '#5F244F',
+              900: '#3D1533',
+            },
+            oase: {
+              cream: '#FDFBF7',
+              surface: '#FDF7FB',
+              border: '#CCA8C5',
+              plum: '#240B1D',
+              muted: '#553D4F'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Animasi lingkaran pernapasan */
+    @keyframes breathePulse {
+      0% { transform: scale(0.85); box-shadow: 0 0 0 0 rgba(161, 65, 137, 0.4); }
+      35% { transform: scale(1.25); box-shadow: 0 0 50px 20px rgba(161, 65, 137, 0.3); }
+      70% { transform: scale(1.25); box-shadow: 0 0 50px 20px rgba(161, 65, 137, 0.3); }
+      100% { transform: scale(0.85); box-shadow: 0 0 0 0 rgba(161, 65, 137, 0); }
+    }
+    .breathing-active {
+      transition: all 1s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-oase-surface text-oase-plum font-sans antialiased selection:bg-heather-200 selection:text-heather-900 min-h-screen flex flex-col">
+
+  <!-- Background Decorative Blurs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-heather-200/50 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-32 w-80 h-80 bg-heather-300/30 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-32 left-1/4 w-96 h-96 bg-heather-100/60 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Header / Navigation -->
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-white/90 border-b border-oase-border/80 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+        
+        <!-- Logo -->
+        <a href="dashboard-awal.html" class="flex items-center gap-3 group">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-heather-600 to-heather-400 flex items-center justify-center text-white shadow-md shadow-heather-500/20 group-hover:scale-105 transition-transform">
+            <i data-lucide="activity" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <span class="text-xl font-extrabold tracking-tight text-oase-plum block leading-tight">OASE Cerita</span>
+            <span class="text-[11px] font-medium text-heather-600 block">Peta Mood & Relaksasi</span>
+          </div>
+        </a>
+
+        <!-- Right Buttons -->
+        <div class="flex items-center gap-3">
+          <a href="komunitas.html" class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-heather-200 hover:bg-heather-50 text-oase-plum font-semibold text-xs transition-all">
+            <i data-lucide="users" class="w-4 h-4 text-heather-600"></i>
+            <span>Komunitas</span>
+          </a>
+          <a href="dashboard-awal.html" class="px-3.5 py-2 rounded-xl bg-heather-500 hover:bg-heather-600 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition-all">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>Kembali ke Beranda</span>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10">
+
+    <!-- Hero Title -->
+    <div class="text-center max-w-2xl mx-auto space-y-2">
+      <span class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-heather-100 text-heather-800 text-xs font-bold">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+        Jurnal Emosi & Relaksasi Diri
+      </span>
+      <h1 class="text-2xl sm:text-4xl font-extrabold text-oase-plum tracking-tight">
+        Tenangkan Pikiran, Kenali Emosimu
+      </h1>
+      <p class="text-xs sm:text-sm text-oase-muted leading-relaxed">
+        Ambil jeda sejenak dari penatnya hari. Catat apa yang kamu rasakan dan pulihkan energi dengan latihan pernapasan terpandu.
+      </p>
+    </div>
+
+    <!-- 1. PETA MOOD HARIAN (MOOD TRACKER) -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-heather-100 shadow-sm space-y-6">
+      <div class="flex items-center justify-between border-b border-heather-100 pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-oase-plum flex items-center gap-2">
+            <i data-lucide="smile" class="w-5 h-5 text-heather-600"></i>
+            <span>Bagaimana Perasaanmu Hari Ini?</span>
+          </h2>
+          <p class="text-xs text-oase-muted mt-0.5">Pilih ikon emosi yang paling menggambarkan suasana hatimu saat ini.</p>
+        </div>
+        <span id="currentDateLabel" class="text-xs font-bold text-heather-700 bg-heather-50 px-3 py-1 rounded-full border border-heather-200">
+          Hari Ini
+        </span>
+      </div>
+
+      <!-- Pilihan Mood Emosi -->
+      <div class="grid grid-cols-2 sm:grid-cols-6 gap-3" id="moodButtonsContainer">
+        <button type="button" class="mood-choice-btn p-3.5 rounded-2xl border-2 border-heather-100 hover:border-heather-400 bg-white flex flex-col items-center gap-2 transition-all hover:scale-105" data-mood="senang" data-label="Bahagia" data-icon="😊">
+          <span class="text-3xl">😊</span>
+          <span class="text-xs font-bold text-oase-plum">Bahagia</span>
+        </button>
+
+        <button type="button" class="mood-choice-btn p-3.5 rounded-2xl border-2 border-heather-100 hover:border-heather-400 bg-white flex flex-col items-center gap-2 transition-all hover:scale-105" data-mood="tenang" data-label="Tenang" data-icon="😌">
+          <span class="text-3xl">😌</span>
+          <span class="text-xs font-bold text-oase-plum">Tenang</span>
+        </button>
+
+        <button type="button" class="mood-choice-btn p-3.5 rounded-2xl border-2 border-heather-100 hover:border-heather-400 bg-white flex flex-col items-center gap-2 transition-all hover:scale-105" data-mood="biasa" data-label="Biasa Saja" data-icon="😐">
+          <span class="text-3xl">😐</span>
+          <span class="text-xs font-bold text-oase-plum">Biasa</span>
+        </button>
+
+        <button type="button" class="mood-choice-btn p-3.5 rounded-2xl border-2 border-heather-100 hover:border-heather-400 bg-white flex flex-col items-center gap-2 transition-all hover:scale-105" data-mood="lelah" data-label="Lelah / Capek" data-icon="😴">
+          <span class="text-3xl">😴</span>
+          <span class="text-xs font-bold text-oase-plum">Lelah</span>
+        </button>
+
+        <button type="button" class="mood-choice-btn p-3.5 rounded-2xl border-2 border-heather-100 hover:border-heather-400 bg-white flex flex-col items-center gap-2 transition-all hover:scale-105" data-mood="cemas" data-label="Cemas / Takut" data-icon="😰">
+          <span class="text-3xl">😰</span>
+          <span class="text-xs font-bold text-oase-plum">Cemas</span>
+        </button>
+
+        <button type="button" class="mood-choice-btn p-3.5 rounded-2xl border-2 border-heather-100 hover:border-heather-400 bg-white flex flex-col items-center gap-2 transition-all hover:scale-105" data-mood="sedih" data-label="Sedih / Kecewa" data-icon="😔">
+          <span class="text-3xl">😔</span>
+          <span class="text-xs font-bold text-oase-plum">Sedih</span>
+        </button>
+      </div>
+
+      <!-- Form Catatan Jurnal Singkat -->
+      <div class="space-y-3">
+        <label for="moodNoteInput" class="block text-xs font-bold text-oase-plum">
+          Ceritakan Sedikit (Opsional, untuk dirimu sendiri):
+        </label>
+        <textarea 
+          id="moodNoteInput" 
+          rows="2" 
+          placeholder="Misal: Hari ini presentasi tugas selesai, tapi rasanya lelah sekali..." 
+          class="w-full p-3.5 rounded-2xl border border-heather-200 text-xs text-oase-plum focus:outline-none focus:border-heather-500 focus:ring-2 focus:ring-heather-200 bg-oase-surface/50 resize-none"
+        ></textarea>
+        <button id="saveMoodBtn" type="button" class="px-5 py-2.5 rounded-xl bg-heather-500 hover:bg-heather-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Simpan Catatan Mood Hari Ini</span>
+        </button>
+      </div>
+
+      <!-- Riwayat Mood 7 Hari Terakhir -->
+      <div class="pt-4 border-t border-heather-100 space-y-3">
+        <span class="text-xs font-bold text-oase-plum block">Perjalanan Emosi 7 Hari Terakhir:</span>
+        <div id="weeklyMoodTrackContainer" class="grid grid-cols-7 gap-2 text-center">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. LATIHAN PERNAPASAN TERPANDU (BOX BREATHING 4-7-8) -->
+    <section class="bg-gradient-to-br from-white via-heather-50/50 to-white rounded-3xl p-6 sm:p-10 border border-heather-200 shadow-sm text-center space-y-6">
+      <div class="max-w-md mx-auto space-y-2">
+        <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold inline-block">
+          Teknik Pernapasan 4-7-8
+        </span>
+        <h2 class="text-xl sm:text-2xl font-extrabold text-oase-plum">
+          Latihan Pernapasan Menenangkan
+        </h2>
+        <p class="text-xs text-oase-muted leading-relaxed">
+          Tarik napas selama 4 detik, tahan selama 7 detik, dan hembuskan perlahan selama 8 detik untuk meredakan ketegangan sistem saraf.
+        </p>
+      </div>
+
+      <!-- Visual Breathing Circle -->
+      <div class="py-8 flex flex-col items-center justify-center">
+        <div 
+          id="breathingCircle" 
+          class="w-44 h-44 sm:w-52 sm:h-52 rounded-full bg-gradient-to-tr from-heather-600 via-heather-400 to-rose-300 text-white flex flex-col items-center justify-center shadow-xl shadow-heather-500/20 transform transition-transform duration-1000 relative"
+        >
+          <span id="breathingActionText" class="text-lg sm:text-xl font-extrabold tracking-wide drop-shadow-sm">Siap?</span>
+          <span id="breathingTimerText" class="text-3xl sm:text-4xl font-extrabold mt-1 font-mono">0</span>
+          <span id="breathingSubText" class="text-[10px] font-medium text-white/90 mt-1">Tekan tombol mulai</span>
+        </div>
+      </div>
+
+      <!-- Control Buttons -->
+      <div class="flex items-center justify-center gap-3">
+        <button id="startBreathingBtn" type="button" class="px-6 py-3 rounded-2xl bg-heather-500 hover:bg-heather-600 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:scale-105 transition-all">
+          <i data-lucide="play" class="w-4 h-4"></i>
+          <span>Mulai Latihan (3 Siklus)</span>
+        </button>
+        <button id="stopBreathingBtn" type="button" class="hidden px-5 py-3 rounded-2xl border border-heather-200 hover:bg-heather-50 text-oase-plum font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all">
+          <i data-lucide="square" class="w-4 h-4"></i>
+          <span>Hentikan</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. SUARA ALAM RELAKSASI (AUDIO SOUNDSCAPES) -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-heather-100 shadow-sm space-y-5">
+      <div class="flex items-center justify-between border-b border-heather-100 pb-3">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-oase-plum flex items-center gap-2">
+            <i data-lucide="headphones" class="w-5 h-5 text-heather-600"></i>
+            <span>Suara Alam Penenang Pikiran</span>
+          </h2>
+          <p class="text-xs text-oase-muted mt-0.5">Gunakan earphone untuk pengalaman mendengarkan yang lebih damai.</p>
+        </div>
+        <span class="text-[11px] font-bold text-heather-700 bg-heather-50 px-2.5 py-1 rounded-lg border border-heather-200">
+          Audio Sintesis Realtime
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Hujan Lembut -->
+        <div class="p-4 rounded-2xl border border-heather-100 bg-oase-surface/50 hover:border-heather-300 transition-all space-y-3">
+          <div class="flex items-center gap-2.5 font-bold text-sm text-oase-plum">
+            <span class="text-xl">🌧️</span>
+            <span>Rintik Hujan Damai</span>
+          </div>
+          <p class="text-[11px] text-oase-muted">Deru suara rintik hujan lembut untuk membantumu fokus belajar atau tidur nyenyak.</p>
+          <button class="sound-toggle-btn w-full py-2 rounded-xl border border-heather-200 bg-white hover:bg-heather-50 text-heather-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all" data-sound="rain">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span>Putar Suara Hujan</span>
+          </button>
+        </div>
+
+        <!-- Ombak Laut -->
+        <div class="p-4 rounded-2xl border border-heather-100 bg-oase-surface/50 hover:border-heather-300 transition-all space-y-3">
+          <div class="flex items-center gap-2.5 font-bold text-sm text-oase-plum">
+            <span class="text-xl">🌊</span>
+            <span>Deburan Ombak Pantai</span>
+          </div>
+          <p class="text-[11px] text-oase-muted">Alunan ombak pantai perlahan yang membantu merilekskan otot bahu dan leher.</p>
+          <button class="sound-toggle-btn w-full py-2 rounded-xl border border-heather-200 bg-white hover:bg-heather-50 text-heather-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all" data-sound="waves">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span>Putar Suara Ombak</span>
+          </button>
+        </div>
+
+        <!-- Hening Alam -->
+        <div class="p-4 rounded-2xl border border-heather-100 bg-oase-surface/50 hover:border-heather-300 transition-all space-y-3">
+          <div class="flex items-center gap-2.5 font-bold text-sm text-oase-plum">
+            <span class="text-xl">🍃</span>
+            <span>Semilir Angin Teduh</span>
+          </div>
+          <p class="text-[11px] text-oase-muted">Derau pink-noise hangat seperti semilir angin di pedesaan yang menyejukkan hati.</p>
+          <button class="sound-toggle-btn w-full py-2 rounded-xl border border-heather-200 bg-white hover:bg-heather-50 text-heather-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all" data-sound="wind">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span>Putar Suara Angin</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. TEKNIK GROUNDING 5-4-3-2-1 -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-heather-100 shadow-sm space-y-4">
+      <div class="space-y-1">
+        <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">Teknik Darurat Cemas</span>
+        <h2 class="text-base sm:text-lg font-bold text-oase-plum">
+          Teknik Grounding 5-4-3-2-1 saat Merasa Panik atau Kewalahan
+        </h2>
+        <p class="text-xs text-oase-muted">Jika pikiranmu terasa terlalu bising atau cemas mendadak di kelas, fokuskan pancaindramu:</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-2">
+        <div class="p-3.5 rounded-2xl bg-heather-50/80 border border-heather-100 text-center space-y-1">
+          <span class="text-2xl font-extrabold text-heather-700 block">5</span>
+          <span class="text-xs font-bold text-oase-plum block">Lihat</span>
+          <p class="text-[11px] text-oase-muted">5 benda di sekitarmu yang bisa dilihat warnanya.</p>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-heather-50/80 border border-heather-100 text-center space-y-1">
+          <span class="text-2xl font-extrabold text-heather-700 block">4</span>
+          <span class="text-xs font-bold text-oase-plum block">Sentuh</span>
+          <p class="text-[11px] text-oase-muted">4 tekstur di dekatmu (meja, kain seragam, pulpen).</p>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-heather-50/80 border border-heather-100 text-center space-y-1">
+          <span class="text-2xl font-extrabold text-heather-700 block">3</span>
+          <span class="text-xs font-bold text-oase-plum block">Dengar</span>
+          <p class="text-[11px] text-oase-muted">3 suara yang terdengar (jam dinding, angin, hembusan napas).</p>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-heather-50/80 border border-heather-100 text-center space-y-1">
+          <span class="text-2xl font-extrabold text-heather-700 block">2</span>
+          <span class="text-xs font-bold text-oase-plum block">Cium</span>
+          <p class="text-[11px] text-oase-muted">2 aroma di ruangan atau hirup udara segar.</p>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-heather-50/80 border border-heather-100 text-center space-y-1">
+          <span class="text-2xl font-extrabold text-heather-700 block">1</span>
+          <span class="text-xs font-bold text-oase-plum block">Rasa</span>
+          <p class="text-[11px] text-oase-muted">1 rasa di mulut atau teguk seteguk air putih hangat.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-oase-border/80 mt-auto py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-oase-muted space-y-1">
+      <p class="font-medium">OASE Cerita &copy; 2026 • Obrolan Aman Seputar Emosi Remaja & Siswa</p>
+      <p class="text-[11px] text-heather-600">Luangkan 5 menit sehari untuk menyapa dirimu sendiri dengan penuh kasih sayang.</p>
+    </div>
+  </footer>
+
+  <script src="relaksasi-mood.js"></script>
+</body>
+</html>
