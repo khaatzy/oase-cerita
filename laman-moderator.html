@@ -131,8 +131,14 @@
           <span>Komunitas</span>
         </a>
 
+        <!-- Tombol Buka Pop-up Login 2 Opsi -->
+        <button id="openLoginModalBtn" title="Buka Pop-up Login (User Biasa / Moderator)" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-heather-600 hover:from-rose-700 hover:to-heather-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm shadow-rose-500/20">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>Login / Masuk</span>
+        </button>
+
         <!-- Tombol Keluar -->
-        <button id="logoutBtn" title="Keluar dari Laman Moderator" class="px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all flex items-center gap-1.5">
+        <button id="logoutBtn" title="Keluar dari Sesi Moderator" class="px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all flex items-center gap-1.5">
           <i data-lucide="log-out" class="w-4 h-4"></i>
           <span class="hidden sm:inline">Keluar</span>
         </button>
@@ -508,10 +514,10 @@
   <div id="dualAuthModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md hidden animate-fadeIn">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-heather-200 shadow-2xl relative transform transition-all space-y-5">
       
-      <!-- Tombol Tutup -->
-      <a href="dashboard-awal.html" class="absolute top-5 right-5 text-oase-muted hover:text-heather-700 p-1 rounded-full hover:bg-heather-50 transition-colors" title="Kembali ke Beranda">
+      <!-- Tombol Tutup Modal -->
+      <button type="button" id="closeDualAuthModalBtn" class="absolute top-5 right-5 text-oase-muted hover:text-heather-700 p-1 rounded-full hover:bg-heather-50 transition-colors" title="Tutup">
         <i data-lucide="x" class="w-5 h-5"></i>
-      </a>
+      </button>
 
       <!-- Header Modal -->
       <div class="text-center space-y-1">

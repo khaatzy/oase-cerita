@@ -292,6 +292,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Event Listeners Dual Modal
+  const openLoginModalBtn = document.getElementById('openLoginModalBtn');
+  const closeDualAuthModalBtn = document.getElementById('closeDualAuthModalBtn');
+
+  if (openLoginModalBtn) {
+    openLoginModalBtn.onclick = () => {
+      openDualAuthModal();
+    };
+  }
+
+  if (closeDualAuthModalBtn) {
+    closeDualAuthModalBtn.onclick = () => {
+      closeDualAuthModal();
+    };
+  }
+
   if (roleTabUser) roleTabUser.onclick = () => setAuthRole('user');
   if (roleTabMod) roleTabMod.onclick = () => setAuthRole('moderator');
   if (tabAuthSignIn) tabAuthSignIn.onclick = () => setAuthMode('login');
