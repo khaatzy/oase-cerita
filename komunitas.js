@@ -5,6 +5,18 @@
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // AUTH GUARD: HANYA PENGGUNA LOGIN YANG DAPAT MENGAKSES
+  let session = null;
+  if (window.AuthService && window.AuthService.getSession) {
+    try { session = await window.AuthService.getSession(); } catch (e) {}
+  }
+  const activeEmail = localStorage.getItem('oase_active_user_email');
+  if (!session && !activeEmail) {
+    sessionStorage.setItem('oase_auth_redirect', window.location.pathname.split('/').pop() || 'komunitas.html');
+    window.location.href = 'dashboard-awal.html?auth=required';
+    return;
+  }
+
   // Inisialisasi ikon
   if (window.lucide) lucide.createIcons();
 

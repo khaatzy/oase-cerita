@@ -119,26 +119,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (openWriteStoryBtn) openWriteStoryBtn.addEventListener('click', handleStartStoryClick);
   if (navWriteStoryBtn) navWriteStoryBtn.addEventListener('click', openStoryModal);
 
-  // Intercept 'Cek Tiket' links
-  document.querySelectorAll('a[href="kirim-cerita.html#cek-tiket"]').forEach(link => {
-    link.addEventListener('click', (e) => {
-      if (!currentUserSession) {
-        e.preventDefault();
-        sessionStorage.setItem('oase_auth_redirect', 'kirim-cerita.html#cek-tiket');
-        openAuthModal('login');
-        showAuthFeedback('Silakan masuk atau daftar terlebih dahulu untuk mengecek balasan tiket Anda.', 'info');
-      }
-    });
-  });
+  // Intercept Protected Features (Kirim Cerita / Konselor, Komunitas, Relaksasi & Mood)
+  const protectedFeatureLinks = document.querySelectorAll(
+    '.chat-counselor-btn, a[href*="action=chat-counselor"], a[href*="kirim-cerita.html"], a[href*="komunitas.html"], a[href*="relaksasi-mood.html"]'
+  );
 
-  // Intercept 'Chat dengan Konselor' links
-  document.querySelectorAll('.chat-counselor-btn, a[href*="action=chat-counselor"], a[href="kirim-cerita.html"]').forEach(link => {
+  protectedFeatureLinks.forEach(link => {
     link.addEventListener('click', (e) => {
-      if (!currentUserSession) {
+      const activeEmail = localStorage.getItem('oase_active_user_email');
+      if (!currentUserSession && !activeEmail) {
         e.preventDefault();
-        sessionStorage.setItem('oase_auth_redirect', 'dashboard-user.html?action=chat-counselor');
+        const targetHref = link.getAttribute('href');
+        sessionStorage.setItem('oase_auth_redirect', targetHref);
         openAuthModal('login');
-        showAuthFeedback('Silakan masuk atau daftar akun terlebih dahulu untuk chat langsung dengan konselor.', 'info');
+        showAuthFeedback('Fitur ini khusus untuk pengguna yang sudah masuk. Silakan login atau daftar akun terlebih dahulu.', 'info');
       }
     });
   });
@@ -281,6 +275,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) {
       console.warn('Session init:', e);
     }
+  }
+
+  // Cek apakah dialihkan dari halaman fitur yang dilindungi (?auth=required)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('auth') === 'required' || urlParams.get('auth') === 'login') {
+    setTimeout(() => {
+      const activeEmail = localStorage.getItem('oase_active_user_email');
+      if (!currentUserSession && !activeEmail) {
+        openAuthModal('login');
+        showAuthFeedback('Fitur ini khusus untuk pengguna yang sudah masuk. Silakan login atau daftar akun terlebih dahulu.', 'info');
+      }
+    }, 300);
   }
 
   // ==========================================

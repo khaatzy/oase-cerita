@@ -3,7 +3,19 @@
  * Fitur: Peta Mood Harian, Animasi Pernapasan 4-7-8 Terpandu, dan Suara Alam Sintetis (Web Audio API)
  */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // AUTH GUARD: HANYA PENGGUNA LOGIN YANG DAPAT MENGAKSES
+  let session = null;
+  if (window.AuthService && window.AuthService.getSession) {
+    try { session = await window.AuthService.getSession(); } catch (e) {}
+  }
+  const activeEmail = localStorage.getItem('oase_active_user_email');
+  if (!session && !activeEmail) {
+    sessionStorage.setItem('oase_auth_redirect', window.location.pathname.split('/').pop() || 'relaksasi-mood.html');
+    window.location.href = 'dashboard-awal.html?auth=required';
+    return;
+  }
+
   if (window.lucide) lucide.createIcons();
 
   // 1. SETUP TANGGAL HARI INI
