@@ -15,6 +15,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   const confirmDeleteCommentBtn = document.getElementById('confirmDeleteCommentBtn');
   const filterBtns = document.querySelectorAll('.filter-btn');
 
+  // Modal Bagikan Cerita Komunitas
+  const newCommunityStoryModal = document.getElementById('newCommunityStoryModal');
+  const openNewStoryModalBtn = document.getElementById('openNewStoryModalBtn');
+  const heroShareStoryBtn = document.getElementById('heroShareStoryBtn');
+  const closeNewStoryModalBtn = document.getElementById('closeNewStoryModalBtn');
+  const cancelNewStoryModalBtn = document.getElementById('cancelNewStoryModalBtn');
+  const newCommunityStoryForm = document.getElementById('newCommunityStoryForm');
+  const communityStoryAuthorInput = document.getElementById('communityStoryAuthorInput');
+  const communityStoryCategorySelect = document.getElementById('communityStoryCategorySelect');
+  const communityStoryContentInput = document.getElementById('communityStoryContentInput');
+
   let currentCategory = 'all';
   let isModerator = false;
   let currentUserName = 'Sahabat OASE';
@@ -107,34 +118,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('oase_community_reactions', JSON.stringify(reactionsObj));
   }
 
-  // 3. RENDER FEED KOMUNITAS
+  // Ambil & simpan cerita khusus komunitas (Bukan curhat konselor)
+  function getStoredCommunityStories() {
+    return JSON.parse(localStorage.getItem('oase_community_stories') || '[]');
+  }
+
+  function saveStoredCommunityStories(stories) {
+    localStorage.setItem('oase_community_stories', JSON.stringify(stories));
+  }
+
+  // 3. RENDER FEED KOMUNITAS (HANYA MEMUAT CERITA KHUSUS KOMUNITAS, PRIVASI KONSELING 100% TERJAGA)
   async function renderCommunityFeed() {
     await checkUserRole();
 
-    // Gabungkan default dengan submissions yang ada di database / localStorage
-    let allStories = [...defaultCommunityStories];
-
-    if (window.CounselingService && window.CounselingService.getAllSubmissions) {
-      try {
-        const subs = await window.CounselingService.getAllSubmissions();
-        const cleanSubs = (subs || [])
-          .filter(s => !s.is_crisis && !s.flagged_words) // Hanya tampilkan cerita aman yang tidak krisis
-          .slice(0, 5)
-          .map((s, idx) => ({
-            id: s.id || `story-sub-${idx}`,
-            author_name: s.author_name || 'Sahabat Anonim',
-            category: s.category || 'Curhat Umum',
-            emotion: 'Butuh Didengar',
-            created_at: s.created_at || new Date().toISOString(),
-            story_content: s.story_content,
-            hugs: 5 + (idx * 3),
-            cheers: 8 + (idx * 2)
-          }));
-        if (cleanSubs.length > 0) {
-          allStories = [...cleanSubs, ...defaultCommunityStories];
-        }
-      } catch (e) {}
-    }
+    // HANYA memuat cerita yang sengaja dikirimkan ke komunitas (privasi konseling 100% terjaga)
+    const communityUserStories = getStoredCommunityStories();
+    let allStories = [...communityUserStories, ...defaultCommunityStories];
 
     // Filter kategori
     const filteredStories = currentCategory === 'all'
@@ -148,14 +147,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             <i data-lucide="feather" class="w-6 h-6"></i>
           </div>
           <h3 class="text-base font-bold text-oase-plum">Belum ada cerita di kategori ini</h3>
-          <p class="text-xs text-oase-muted">Jadilah yang pertama membagikan cerita atau kirimkan curhat pertamamu!</p>
-          <a href="kirim-cerita.html" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-heather-500 text-white font-bold text-xs mt-2">
+          <p class="text-xs text-oase-muted">Jadilah yang pertama membagikan cerita ke teman-teman komunitas!</p>
+          <button id="emptyStateShareBtn" type="button" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-heather-500 hover:bg-heather-600 text-white font-bold text-xs mt-2 transition-all">
             <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i>
-            <span>Tulis Curhat Sekarang</span>
-          </a>
+            <span>Bagikan Cerita Pertama</span>
+          </button>
         </div>
       `;
       lucide.createIcons();
+      const emptyStateShareBtn = document.getElementById('emptyStateShareBtn');
+      if (emptyStateShareBtn) {
+        emptyStateShareBtn.onclick = openNewStoryModal;
+      }
       return;
     }
 
@@ -471,6 +474,78 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderCommunityFeed();
     };
   });
+
+  // 8. MODAL BAGIKAN CERITA KE KOMUNITAS (MURNI HANYA TAMPIL DI KOMUNITAS)
+  function openNewStoryModal() {
+    if (newCommunityStoryModal) {
+      newCommunityStoryModal.classList.remove('hidden');
+      if (communityStoryAuthorInput) {
+        if (!communityStoryAuthorInput.value && currentUserName && currentUserName !== 'Sahabat OASE') {
+          communityStoryAuthorInput.value = currentUserName;
+        }
+        communityStoryAuthorInput.focus();
+      }
+    }
+  }
+
+  function closeNewStoryModal() {
+    if (newCommunityStoryModal) {
+      newCommunityStoryModal.classList.add('hidden');
+    }
+    if (newCommunityStoryForm) {
+      newCommunityStoryForm.reset();
+    }
+  }
+
+  if (openNewStoryModalBtn) openNewStoryModalBtn.onclick = openNewStoryModal;
+  if (heroShareStoryBtn) heroShareStoryBtn.onclick = openNewStoryModal;
+  if (closeNewStoryModalBtn) closeNewStoryModalBtn.onclick = closeNewStoryModal;
+  if (cancelNewStoryModalBtn) cancelNewStoryModalBtn.onclick = closeNewStoryModal;
+
+  if (newCommunityStoryModal) {
+    newCommunityStoryModal.onclick = (e) => {
+      if (e.target === newCommunityStoryModal) closeNewStoryModal();
+    };
+  }
+
+  if (newCommunityStoryForm) {
+    newCommunityStoryForm.onsubmit = (e) => {
+      e.preventDefault();
+      const author = communityStoryAuthorInput ? communityStoryAuthorInput.value.trim() : '';
+      const category = communityStoryCategorySelect ? communityStoryCategorySelect.value : 'Akademik';
+      const content = communityStoryContentInput ? communityStoryContentInput.value.trim() : '';
+
+      if (!content) return;
+
+      // Filter Keamanan SARA & Cyberbullying
+      if (window.CrisisDetectionService) {
+        const check = window.CrisisDetectionService.checkContent(content);
+        if (check.isViolation) {
+          alert(`⚠️ PERINGATAN KOMUNITAS: Cerita Anda terdeteksi mengandung kata yang dilarang atau berpotensi menyakiti sesama ("${check.matchedKeyword}"). Cerita tidak dapat dipublikasikan demi menjaga ruang empati OASE tetap aman.`);
+          return;
+        }
+      }
+
+      const newStory = {
+        id: 'story-kom-' + Date.now(),
+        author_name: author || 'Sahabat Anonim',
+        category: category,
+        emotion: 'Berbagi Cerita',
+        created_at: new Date().toISOString(),
+        story_content: content,
+        hugs: 0,
+        cheers: 0
+      };
+
+      const stories = getStoredCommunityStories();
+      stories.unshift(newStory);
+      saveStoredCommunityStories(stories);
+
+      closeNewStoryModal();
+      renderCommunityFeed();
+      showToast('Cerita komunitasmu berhasil dibagikan! ✨');
+    };
+  }
 
   // HELPER FUNCTIONS
   function escapeHtml(str) {

@@ -123,23 +123,26 @@ document.addEventListener('DOMContentLoaded', () => {
   let breathingInterval = null;
   let isBreathingActive = false;
 
-  function playSoftChime(frequency = 440) {
+  async function playSoftChime(frequency = 440) {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
       osc.type = 'sine';
       osc.frequency.setValueAtTime(frequency, ctx.currentTime);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.8);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.0);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.8);
+      osc.stop(ctx.currentTime + 1.0);
     } catch (e) {}
   }
 
@@ -228,58 +231,98 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeAudioCtx = null;
   let activeNoiseNode = null;
   let activeFilterNode = null;
+  let activeLfo = null;
   let currentPlayingSound = null;
 
-  function createNoiseBuffer(ctx, seconds = 5) {
+  // Generator Brown Noise (Alami, hangat, mirip suara hujan / ombak asli)
+  function createBrownNoiseBuffer(ctx, seconds = 10) {
     const bufferSize = ctx.sampleRate * seconds;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
+    let lastOut = 0.0;
     for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1; // White noise
+      const white = Math.random() * 2 - 1;
+      // Filter integrasi brownian untuk suara gemuruh alami
+      lastOut = (lastOut + (0.02 * white)) / 1.02;
+      data[i] = lastOut * 3.5;
     }
     return buffer;
   }
 
-  function playSoundscape(type) {
+  async function playSoundscape(type) {
     stopSoundscape();
 
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-
-    activeAudioCtx = new AudioCtx();
-    const buffer = createNoiseBuffer(activeAudioCtx);
-
-    activeNoiseNode = activeAudioCtx.createBufferSource();
-    activeNoiseNode.buffer = buffer;
-    activeNoiseNode.loop = true;
-
-    activeFilterNode = activeAudioCtx.createBiquadFilter();
-    const gainNode = activeAudioCtx.createGain();
-
-    if (type === 'rain') {
-      activeFilterNode.type = 'lowpass';
-      activeFilterNode.frequency.setValueAtTime(800, activeAudioCtx.currentTime);
-      gainNode.gain.setValueAtTime(0.09, activeAudioCtx.currentTime);
-    } else if (type === 'waves') {
-      activeFilterNode.type = 'bandpass';
-      activeFilterNode.frequency.setValueAtTime(450, activeAudioCtx.currentTime);
-      activeFilterNode.Q.setValueAtTime(1.5, activeAudioCtx.currentTime);
-      gainNode.gain.setValueAtTime(0.12, activeAudioCtx.currentTime);
-    } else { // wind
-      activeFilterNode.type = 'lowpass';
-      activeFilterNode.frequency.setValueAtTime(320, activeAudioCtx.currentTime);
-      gainNode.gain.setValueAtTime(0.08, activeAudioCtx.currentTime);
+    if (!AudioCtx) {
+      alert('Peramban Anda belum mendukung pemutaran Web Audio.');
+      return;
     }
 
-    activeNoiseNode.connect(activeFilterNode);
-    activeFilterNode.connect(gainNode);
-    gainNode.connect(activeAudioCtx.destination);
+    try {
+      activeAudioCtx = new AudioCtx();
+      if (activeAudioCtx.state === 'suspended') {
+        await activeAudioCtx.resume();
+      }
 
-    activeNoiseNode.start();
-    currentPlayingSound = type;
+      const buffer = createBrownNoiseBuffer(activeAudioCtx, 10);
+      activeNoiseNode = activeAudioCtx.createBufferSource();
+      activeNoiseNode.buffer = buffer;
+      activeNoiseNode.loop = true;
+
+      activeFilterNode = activeAudioCtx.createBiquadFilter();
+      const gainNode = activeAudioCtx.createGain();
+
+      if (type === 'rain') {
+        // Hujan: Lowpass hangat dengan volume jelas
+        activeFilterNode.type = 'lowpass';
+        activeFilterNode.frequency.setValueAtTime(1200, activeAudioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.40, activeAudioCtx.currentTime);
+      } else if (type === 'waves') {
+        // Ombak: Filter dinamis dengan LFO ritmis naik-turun
+        activeFilterNode.type = 'lowpass';
+        activeFilterNode.frequency.setValueAtTime(500, activeAudioCtx.currentTime);
+
+        activeLfo = activeAudioCtx.createOscillator();
+        const lfoGain = activeAudioCtx.createGain();
+        activeLfo.frequency.setValueAtTime(0.12, activeAudioCtx.currentTime); // Siklus ombak setiap 8 detik
+        lfoGain.gain.setValueAtTime(320, activeAudioCtx.currentTime);
+        activeLfo.connect(activeFilterNode.frequency);
+        activeLfo.start();
+
+        gainNode.gain.setValueAtTime(0.45, activeAudioCtx.currentTime);
+      } else { // wind
+        // Angin: Bandpass dengan modulasi lembut
+        activeFilterNode.type = 'bandpass';
+        activeFilterNode.frequency.setValueAtTime(420, activeAudioCtx.currentTime);
+        activeFilterNode.Q.setValueAtTime(2.0, activeAudioCtx.currentTime);
+
+        activeLfo = activeAudioCtx.createOscillator();
+        const lfoGain = activeAudioCtx.createGain();
+        activeLfo.frequency.setValueAtTime(0.15, activeAudioCtx.currentTime);
+        lfoGain.gain.setValueAtTime(150, activeAudioCtx.currentTime);
+        activeLfo.connect(activeFilterNode.frequency);
+        activeLfo.start();
+
+        gainNode.gain.setValueAtTime(0.38, activeAudioCtx.currentTime);
+      }
+
+      activeNoiseNode.connect(activeFilterNode);
+      activeFilterNode.connect(gainNode);
+      gainNode.connect(activeAudioCtx.destination);
+
+      activeNoiseNode.start();
+      currentPlayingSound = type;
+      playSoftChime(523.25); // Bunyikan notifikasi audio aktif
+    } catch (e) {
+      console.error('Gagal memutar audio relaksasi:', e);
+    }
   }
 
   function stopSoundscape() {
+    if (activeLfo) {
+      try { activeLfo.stop(); activeLfo.disconnect(); } catch (e) {}
+      activeLfo = null;
+    }
     if (activeNoiseNode) {
       try { activeNoiseNode.stop(); activeNoiseNode.disconnect(); } catch (e) {}
       activeNoiseNode = null;
