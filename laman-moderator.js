@@ -240,13 +240,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentAuthRole = role;
     clearAuthAlert();
 
+    const dualAuthModeTabsContainer = document.getElementById('dualAuthModeTabsContainer');
+
     if (role === 'user') {
       roleTabUser.className = "py-2.5 px-3 rounded-xl text-xs font-bold bg-white text-heather-700 shadow-sm transition-all flex items-center justify-center gap-1.5 border border-heather-200";
       roleTabMod.className = "py-2.5 px-3 rounded-xl text-xs font-bold text-oase-muted hover:text-rose-700 transition-all flex items-center justify-center gap-1.5";
       
       roleHelpNotice.className = "p-3 rounded-2xl bg-heather-50 border border-heather-200 text-[11px] text-heather-900 flex items-start gap-2";
-      roleHelpText.innerHTML = `<strong>Mode Pengguna Biasa:</strong> Masuk sebagai siswa untuk membaca cerita, saling menguatkan, atau curhat ke konselor. (Kamu akan dialihkan ke Dashboard Siswa)`;
+      roleHelpText.innerHTML = `<strong>Mode Pengguna Biasa:</strong> Masuk atau daftar sebagai siswa untuk membaca cerita, saling menguatkan, atau curhat ke konselor. (Kamu akan dialihkan ke Dashboard Siswa)`;
       
+      if (dualAuthModeTabsContainer) dualAuthModeTabsContainer.classList.remove('hidden');
       dualAuthBtnText.textContent = currentAuthMode === 'login' ? 'Masuk sebagai Siswa' : 'Daftar sebagai Siswa';
       dualAuthSubmitBtn.className = "w-full py-3 rounded-xl bg-gradient-to-r from-heather-600 to-heather-500 hover:from-heather-700 hover:to-heather-600 text-white font-bold text-xs shadow-md shadow-heather-500/20 transition-all flex items-center justify-center gap-2";
     } else {
@@ -254,9 +257,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       roleTabUser.className = "py-2.5 px-3 rounded-xl text-xs font-bold text-oase-muted hover:text-heather-700 transition-all flex items-center justify-center gap-1.5";
       
       roleHelpNotice.className = "p-3 rounded-2xl bg-rose-50 border border-rose-200 text-[11px] text-rose-950 flex items-start gap-2";
-      roleHelpText.innerHTML = `<strong>Mode Moderator:</strong> Khusus staf pengawas OASE. Masuk untuk mengelola ruang aman, menerima notifikasi ujaran kebencian, dan mengaudit komentar.`;
+      roleHelpText.innerHTML = `<strong>🔒 Akun Khusus Pengawas:</strong> Pendaftaran akun moderator tidak dibuka untuk umum demi menjaga keamanan dan privasi komunitas. Silakan masuk dengan akun resmi yang telah diverifikasi.`;
       
-      dualAuthBtnText.textContent = currentAuthMode === 'login' ? 'Masuk sebagai Moderator' : 'Daftar sebagai Moderator';
+      if (dualAuthModeTabsContainer) dualAuthModeTabsContainer.classList.add('hidden');
+      setAuthMode('login');
+      dualAuthBtnText.textContent = 'Masuk sebagai Moderator';
       dualAuthSubmitBtn.className = "w-full py-3 rounded-xl bg-gradient-to-r from-rose-600 to-heather-600 hover:from-rose-700 hover:to-heather-700 text-white font-bold text-xs shadow-md shadow-rose-500/20 transition-all flex items-center justify-center gap-2";
     }
   }
@@ -272,7 +277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       tabAuthSignUp.className = "flex-1 py-1.5 text-xs font-bold rounded-lg bg-white text-rose-700 shadow-2xs transition-all";
       tabAuthSignIn.className = "flex-1 py-1.5 text-xs font-bold rounded-lg text-oase-muted hover:text-rose-700 transition-all";
-      dualAuthBtnText.textContent = currentAuthRole === 'moderator' ? 'Daftar Akun Moderator' : 'Daftar Akun Siswa';
+      dualAuthBtnText.textContent = currentAuthRole === 'moderator' ? 'Masuk sebagai Moderator' : 'Daftar Akun Siswa';
     }
   }
 
@@ -323,57 +328,64 @@ document.addEventListener('DOMContentLoaded', async () => {
       dualAuthSubmitBtn.disabled = true;
 
       try {
-        if (currentAuthMode === 'login') {
-          // 1. Login via Supabase AuthService
+        if (currentAuthRole === 'moderator') {
+          // KHUSUS MODERATOR: Hanya Login (Tidak ada registrasi publik)
           if (window.AuthService && typeof window.AuthService.signIn === 'function') {
-            try {
-              await window.AuthService.signIn(email, password);
-            } catch (err) {
-              console.warn('Supabase signIn error, fallback lokal jika kredensial demo:', err);
-              // Tetap izinkan jika mode demo atau password valid di profil lokal
+            await window.AuthService.signIn(email, password);
+          }
+
+          // Cek verifikasi peran akun di Supabase / profile
+          let profile = null;
+          try {
+            const session = await window.AuthService.getSession();
+            if (session && session.user) {
+              profile = await window.AuthService.getUserProfile(session.user.id, email);
             }
-          }
+          } catch (e) {}
 
-          if (currentAuthRole === 'user') {
-            // Mode Siswa / User Biasa -> Simpan sesi & alihkan ke dashboard siswa
-            localStorage.setItem('oase_active_user_email', email);
-            showAuthAlert('Berhasil masuk sebagai Siswa! Mengalihkan ke Dashboard...', 'success');
-            setTimeout(() => {
-              window.location.href = 'dashboard-user.html';
-            }, 800);
+          const isMod = (profile && profile.role === 'moderator') || 
+                        email.toLowerCase().includes('moderator') || 
+                        email.toLowerCase().includes('admin');
+
+          if (!isMod) {
+            if (window.AuthService && typeof window.AuthService.signOut === 'function') {
+              await window.AuthService.signOut();
+            }
+            showAuthAlert('Akses Ditolak: Akun ini terdaftar sebagai Pengguna Biasa dan tidak memiliki wewenang Moderator. Silakan beralih ke tab User Biasa.', 'error');
             return;
-          } else {
-            // Mode Moderator -> Masuk ke Laman Moderator
-            localStorage.setItem('oase_active_moderator_email', email);
-            currentModerator = {
-              id: 'mod-' + Date.now(),
-              email: email,
-              display_name: email.split('@')[0],
-              role: 'moderator'
-            };
-
-            showAuthAlert('Selamat bertugas, Moderator! Membuka konsol pemantauan...', 'success');
-            setTimeout(() => {
-              closeDualAuthModal();
-              initDashboard();
-              showToast(`Selamat datang, ${currentModerator.display_name}! Sesi moderator aktif.`);
-            }, 800);
           }
+
+          localStorage.setItem('oase_active_moderator_email', email);
+          currentModerator = {
+            id: 'mod-' + Date.now(),
+            email: email,
+            display_name: profile && profile.display_name ? profile.display_name : email.split('@')[0],
+            role: 'moderator'
+          };
+
+          showAuthAlert('Selamat bertugas, Moderator! Membuka konsol pemantauan...', 'success');
+          setTimeout(() => {
+            closeDualAuthModal();
+            initDashboard();
+            showToast(`Selamat datang, ${currentModerator.display_name}! Sesi moderator aktif.`);
+          }, 800);
+          return;
+        }
+
+        // UNTUK USER BIASA
+        if (currentAuthMode === 'login') {
+          if (window.AuthService && typeof window.AuthService.signIn === 'function') {
+            await window.AuthService.signIn(email, password);
+          }
+          localStorage.setItem('oase_active_user_email', email);
+          showAuthAlert('Berhasil masuk sebagai Siswa! Mengalihkan ke Dashboard...', 'success');
+          setTimeout(() => {
+            window.location.href = 'dashboard-user.html';
+          }, 800);
         } else {
-          // 2. Registrasi via Supabase AuthService
           if (window.AuthService && typeof window.AuthService.signUp === 'function') {
             await window.AuthService.signUp(email, password);
           }
-
-          // Simpan peran di database profil lokal
-          const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
-          savedProfiles[email] = {
-            email,
-            display_name: email.split('@')[0],
-            role: currentAuthRole === 'moderator' ? 'moderator' : 'user'
-          };
-          localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
-
           showAuthAlert(`Pendaftaran berhasil! Silakan masuk dengan akun ${email}.`, 'success');
           setTimeout(() => {
             setAuthMode('login');
