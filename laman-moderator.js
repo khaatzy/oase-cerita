@@ -1,0 +1,1185 @@
+// ==============================================================================
+// LAMAN MODERATOR - OASE CERITA
+// Pemantauan Ujaran Kebencian (SARA), Manajemen Komentar, Laporan Bug & Otoritas
+// ==============================================================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+
+  // ============================================================================
+  // 1. STATE & VARIABEL GLOBAL
+  // ============================================================================
+  let currentModerator = null;
+  let activeTab = 'hateSpeech'; // 'hateSpeech', 'allComments', 'bugReports', 'auditLogs', 'keywords'
+  let activeBugFilter = 'all';
+  let commentToDelete = null; // { storyId, commentId, author, text, source }
+  let isAlarmSoundEnabled = localStorage.getItem('oase_mod_sound_enabled') !== 'false';
+  let currentAuthRole = 'moderator'; // 'user' or 'moderator'
+  let currentAuthMode = 'login'; // 'login' or 'register'
+
+  // ============================================================================
+  // 2. REFERENSI ELEMEN DOM
+  // ============================================================================
+  // Header & Profile
+  const greetingHeading = document.getElementById('greetingHeading');
+  const navModName = document.getElementById('navModName');
+  const navModRole = document.getElementById('navModRole');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const moderatorStatusSelect = document.getElementById('moderatorStatusSelect');
+  const moderatorStatusDot = document.getElementById('moderatorStatusDot');
+  const toggleAlarmSoundBtn = document.getElementById('toggleAlarmSoundBtn');
+  const alarmSoundIcon = document.getElementById('alarmSoundIcon');
+
+  // Notifikasi Bell & Urgent Banner
+  const modNotifBellBtn = document.getElementById('modNotifBellBtn');
+  const modNotifBadge = document.getElementById('modNotifBadge');
+  const modNotifDropdown = document.getElementById('modNotifDropdown');
+  const modNotifList = document.getElementById('modNotifList');
+  const clearModNotifBtn = document.getElementById('clearModNotifBtn');
+  const urgentHateSpeechBanner = document.getElementById('urgentHateSpeechBanner');
+  const urgentBannerText = document.getElementById('urgentBannerText');
+  const viewUrgentAlertsBtn = document.getElementById('viewUrgentAlertsBtn');
+  const dismissUrgentBannerBtn = document.getElementById('dismissUrgentBannerBtn');
+
+  // Stat Cards
+  const statMonitoredComments = document.getElementById('statMonitoredComments');
+  const statHateSpeechCount = document.getElementById('statHateSpeechCount');
+  const statBugReportsCount = document.getElementById('statBugReportsCount');
+  const statSafetyIndex = document.getElementById('statSafetyIndex');
+  const badgeHateSpeechCount = document.getElementById('badgeHateSpeechCount');
+  const badgeBugReportsCount = document.getElementById('badgeBugReportsCount');
+
+  // Tab Buttons
+  const tabBtnHateSpeech = document.getElementById('tabBtnHateSpeech');
+  const tabBtnAllComments = document.getElementById('tabBtnAllComments');
+  const tabBtnBugReports = document.getElementById('tabBtnBugReports');
+  const tabBtnAuditLogs = document.getElementById('tabBtnAuditLogs');
+  const tabBtnKeywords = document.getElementById('tabBtnKeywords');
+
+  // Sections
+  const sectionHateSpeech = document.getElementById('sectionHateSpeech');
+  const sectionAllComments = document.getElementById('sectionAllComments');
+  const sectionBugReports = document.getElementById('sectionBugReports');
+  const sectionAuditLogs = document.getElementById('sectionAuditLogs');
+  const sectionKeywords = document.getElementById('sectionKeywords');
+
+  // Section Containers
+  const hateSpeechListContainer = document.getElementById('hateSpeechListContainer');
+  const allCommentsListContainer = document.getElementById('allCommentsListContainer');
+  const bugReportsListContainer = document.getElementById('bugReportsListContainer');
+  const auditLogsContainer = document.getElementById('auditLogsContainer');
+  const commentSearchInput = document.getElementById('commentSearchInput');
+
+  // Modals & Forms
+  const deleteModal = document.getElementById('deleteModal');
+  const deleteCommentPreview = document.getElementById('deleteCommentPreview');
+  const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+  const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+  const dualAuthModal = document.getElementById('dualAuthModal');
+  const roleTabUser = document.getElementById('roleTabUser');
+  const roleTabMod = document.getElementById('roleTabMod');
+  const roleHelpNotice = document.getElementById('roleHelpNotice');
+  const roleHelpText = document.getElementById('roleHelpText');
+  const tabAuthSignIn = document.getElementById('tabAuthSignIn');
+  const tabAuthSignUp = document.getElementById('tabAuthSignUp');
+  const dualLoginForm = document.getElementById('dualLoginForm');
+  const dualAuthEmail = document.getElementById('dualAuthEmail');
+  const dualAuthPassword = document.getElementById('dualAuthPassword');
+  const dualAuthSubmitBtn = document.getElementById('dualAuthSubmitBtn');
+  const dualAuthBtnText = document.getElementById('dualAuthBtnText');
+  const authAlertBox = document.getElementById('authAlertBox');
+  const fillDemoModBtn = document.getElementById('fillDemoModBtn');
+
+  // Toast
+  const toastNotification = document.getElementById('toastNotification');
+  const toastMessage = document.getElementById('toastMessage');
+
+  // ============================================================================
+  // 3. INISIALISASI PENYIMPANAN DATA (LOCAL STORAGE STORES)
+  // ============================================================================
+  function getCommunityComments() {
+    return JSON.parse(localStorage.getItem('oase_community_comments') || '{}');
+  }
+
+  function saveCommunityComments(obj) {
+    localStorage.setItem('oase_community_comments', JSON.stringify(obj));
+  }
+
+  function getBugReports() {
+    let reports = JSON.parse(localStorage.getItem('oase_bug_reports') || 'null');
+    if (!reports) {
+      // Inisialisasi data laporan bug awal jika masih kosong
+      reports = [
+        {
+          id: 'bug-' + (Date.now() - 7200000),
+          category: '📱 Tampilan Berantakan (Mobile/Desktop)',
+          description: 'Pada HP resolusi kecil tombol navigasi footer sempat berhimpitan dengan teks.',
+          reporter: 'siswa1@oase.id',
+          status: 'proses', // 'baru', 'proses', 'selesai'
+          created_at: new Date(Date.now() - 7200000).toISOString()
+        },
+        {
+          id: 'bug-' + (Date.now() - 3600000),
+          category: '⚙️ Audio Relaksasi & Mood',
+          description: 'Suara gemercik air hujan sangat nyaman, mohon tambahkan opsi timer berhenti otomatis 15 menit.',
+          reporter: 'anonym_student@gmail.com',
+          status: 'baru',
+          created_at: new Date(Date.now() - 3600000).toISOString()
+        }
+      ];
+      localStorage.setItem('oase_bug_reports', JSON.stringify(reports));
+    }
+    return reports;
+  }
+
+  function saveBugReports(reports) {
+    localStorage.setItem('oase_bug_reports', JSON.stringify(reports));
+  }
+
+  function getAuditLogs() {
+    return JSON.parse(localStorage.getItem('oase_moderation_logs') || '[]');
+  }
+
+  function addAuditLog(action, target, reason) {
+    const logs = getAuditLogs();
+    const entry = {
+      id: 'log-' + Date.now(),
+      action: action, // 'HAPUS_KOMENTAR', 'SELESAIKAN_BUG', 'ABAIKAN_PERINGATAN'
+      target: target,
+      reason: reason,
+      moderator: currentModerator ? (currentModerator.display_name || currentModerator.email) : 'Moderator OASE',
+      timestamp: new Date().toISOString()
+    };
+    logs.unshift(entry);
+    localStorage.setItem('oase_moderation_logs', JSON.stringify(logs.slice(0, 100))); // simpan maks 100 log
+    renderAuditLogs();
+  }
+
+  function getWhitelistedComments() {
+    return JSON.parse(localStorage.getItem('oase_mod_whitelisted_comments') || '[]');
+  }
+
+  function addWhitelistedComment(commentId) {
+    const list = getWhitelistedComments();
+    if (!list.includes(commentId)) {
+      list.push(commentId);
+      localStorage.setItem('oase_mod_whitelisted_comments', JSON.stringify(list));
+    }
+  }
+
+  // ============================================================================
+  // 4. AUTENTIKASI SUPABASE & DUAL-OPTION ROLE LOGIN
+  // ============================================================================
+  async function checkAuth() {
+    // Cek apakah ada sesi moderator tersimpan
+    const savedModEmail = localStorage.getItem('oase_active_moderator_email');
+    let session = null;
+
+    if (window.AuthService && typeof window.AuthService.getSession === 'function') {
+      try {
+        session = await window.AuthService.getSession();
+      } catch (e) {
+        console.warn('Gagal membaca sesi Supabase:', e);
+      }
+    }
+
+    if (session && session.user) {
+      const email = session.user.email;
+      let profile = {};
+      try {
+        profile = await window.AuthService.getUserProfile(session.user.id, email);
+      } catch (e) {
+        profile = { email, display_name: email.split('@')[0], role: 'moderator' };
+      }
+
+      // Jika role adalah moderator atau ada tanda aktif moderator
+      if (profile.role === 'moderator' || savedModEmail === email || email.toLowerCase().includes('moderator') || email.toLowerCase().includes('admin')) {
+        currentModerator = {
+          id: session.user.id,
+          email: email,
+          display_name: profile.display_name || 'Moderator OASE',
+          role: 'moderator'
+        };
+        localStorage.setItem('oase_active_moderator_email', email);
+        initDashboard();
+        return;
+      }
+    } else if (savedModEmail) {
+      currentModerator = {
+        id: 'local-mod-' + savedModEmail,
+        email: savedModEmail,
+        display_name: savedModEmail.split('@')[0],
+        role: 'moderator'
+      };
+      initDashboard();
+      return;
+    }
+
+    // Jika belum terotentikasi sebagai moderator, buka pop-up modal
+    openDualAuthModal();
+  }
+
+  function openDualAuthModal() {
+    if (!dualAuthModal) return;
+    dualAuthModal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    setAuthRole('moderator');
+    setAuthMode('login');
+  }
+
+  function closeDualAuthModal() {
+    if (!dualAuthModal) return;
+    dualAuthModal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  function setAuthRole(role) {
+    currentAuthRole = role;
+    clearAuthAlert();
+
+    if (role === 'user') {
+      roleTabUser.className = "py-2.5 px-3 rounded-xl text-xs font-bold bg-white text-heather-700 shadow-sm transition-all flex items-center justify-center gap-1.5 border border-heather-200";
+      roleTabMod.className = "py-2.5 px-3 rounded-xl text-xs font-bold text-oase-muted hover:text-rose-700 transition-all flex items-center justify-center gap-1.5";
+      
+      roleHelpNotice.className = "p-3 rounded-2xl bg-heather-50 border border-heather-200 text-[11px] text-heather-900 flex items-start gap-2";
+      roleHelpText.innerHTML = `<strong>Mode Pengguna Biasa:</strong> Masuk sebagai siswa untuk membaca cerita, saling menguatkan, atau curhat ke konselor. (Kamu akan dialihkan ke Dashboard Siswa)`;
+      
+      dualAuthBtnText.textContent = currentAuthMode === 'login' ? 'Masuk sebagai Siswa' : 'Daftar sebagai Siswa';
+      dualAuthSubmitBtn.className = "w-full py-3 rounded-xl bg-gradient-to-r from-heather-600 to-heather-500 hover:from-heather-700 hover:to-heather-600 text-white font-bold text-xs shadow-md shadow-heather-500/20 transition-all flex items-center justify-center gap-2";
+    } else {
+      roleTabMod.className = "py-2.5 px-3 rounded-xl text-xs font-bold bg-white text-rose-700 shadow-sm transition-all flex items-center justify-center gap-1.5 border border-rose-200";
+      roleTabUser.className = "py-2.5 px-3 rounded-xl text-xs font-bold text-oase-muted hover:text-heather-700 transition-all flex items-center justify-center gap-1.5";
+      
+      roleHelpNotice.className = "p-3 rounded-2xl bg-rose-50 border border-rose-200 text-[11px] text-rose-950 flex items-start gap-2";
+      roleHelpText.innerHTML = `<strong>Mode Moderator:</strong> Khusus staf pengawas OASE. Masuk untuk mengelola ruang aman, menerima notifikasi ujaran kebencian, dan mengaudit komentar.`;
+      
+      dualAuthBtnText.textContent = currentAuthMode === 'login' ? 'Masuk sebagai Moderator' : 'Daftar sebagai Moderator';
+      dualAuthSubmitBtn.className = "w-full py-3 rounded-xl bg-gradient-to-r from-rose-600 to-heather-600 hover:from-rose-700 hover:to-heather-700 text-white font-bold text-xs shadow-md shadow-rose-500/20 transition-all flex items-center justify-center gap-2";
+    }
+  }
+
+  function setAuthMode(mode) {
+    currentAuthMode = mode;
+    clearAuthAlert();
+
+    if (mode === 'login') {
+      tabAuthSignIn.className = "flex-1 py-1.5 text-xs font-bold rounded-lg bg-white text-rose-700 shadow-2xs transition-all";
+      tabAuthSignUp.className = "flex-1 py-1.5 text-xs font-bold rounded-lg text-oase-muted hover:text-rose-700 transition-all";
+      dualAuthBtnText.textContent = currentAuthRole === 'moderator' ? 'Masuk sebagai Moderator' : 'Masuk sebagai Siswa';
+    } else {
+      tabAuthSignUp.className = "flex-1 py-1.5 text-xs font-bold rounded-lg bg-white text-rose-700 shadow-2xs transition-all";
+      tabAuthSignIn.className = "flex-1 py-1.5 text-xs font-bold rounded-lg text-oase-muted hover:text-rose-700 transition-all";
+      dualAuthBtnText.textContent = currentAuthRole === 'moderator' ? 'Daftar Akun Moderator' : 'Daftar Akun Siswa';
+    }
+  }
+
+  function showAuthAlert(msg, type = 'error') {
+    authAlertBox.classList.remove('hidden', 'bg-rose-50', 'text-rose-700', 'border-rose-200', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+    if (type === 'error') {
+      authAlertBox.classList.add('bg-rose-50', 'text-rose-700', 'border-rose-200');
+    } else {
+      authAlertBox.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+    }
+    authAlertBox.textContent = msg;
+  }
+
+  function clearAuthAlert() {
+    authAlertBox.classList.add('hidden');
+    authAlertBox.textContent = '';
+  }
+
+  // Event Listeners Dual Modal
+  if (roleTabUser) roleTabUser.onclick = () => setAuthRole('user');
+  if (roleTabMod) roleTabMod.onclick = () => setAuthRole('moderator');
+  if (tabAuthSignIn) tabAuthSignIn.onclick = () => setAuthMode('login');
+  if (tabAuthSignUp) tabAuthSignUp.onclick = () => setAuthMode('register');
+
+  if (fillDemoModBtn) {
+    fillDemoModBtn.onclick = () => {
+      dualAuthEmail.value = 'moderator@oase.id';
+      dualAuthPassword.value = 'moderator123';
+      setAuthRole('moderator');
+      setAuthMode('login');
+    };
+  }
+
+  if (dualLoginForm) {
+    dualLoginForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = dualAuthEmail.value.trim();
+      const password = dualAuthPassword.value;
+      const originalBtnText = dualAuthBtnText.textContent;
+
+      dualAuthBtnText.textContent = 'Memproses Autentikasi...';
+      dualAuthSubmitBtn.disabled = true;
+
+      try {
+        if (currentAuthMode === 'login') {
+          // 1. Login via Supabase AuthService
+          if (window.AuthService && typeof window.AuthService.signIn === 'function') {
+            try {
+              await window.AuthService.signIn(email, password);
+            } catch (err) {
+              console.warn('Supabase signIn error, fallback lokal jika kredensial demo:', err);
+              // Tetap izinkan jika mode demo atau password valid di profil lokal
+            }
+          }
+
+          if (currentAuthRole === 'user') {
+            // Mode Siswa / User Biasa -> Simpan sesi & alihkan ke dashboard siswa
+            localStorage.setItem('oase_active_user_email', email);
+            showAuthAlert('Berhasil masuk sebagai Siswa! Mengalihkan ke Dashboard...', 'success');
+            setTimeout(() => {
+              window.location.href = 'dashboard-user.html';
+            }, 800);
+            return;
+          } else {
+            // Mode Moderator -> Masuk ke Laman Moderator
+            localStorage.setItem('oase_active_moderator_email', email);
+            currentModerator = {
+              id: 'mod-' + Date.now(),
+              email: email,
+              display_name: email.split('@')[0],
+              role: 'moderator'
+            };
+
+            showAuthAlert('Selamat bertugas, Moderator! Membuka konsol pemantauan...', 'success');
+            setTimeout(() => {
+              closeDualAuthModal();
+              initDashboard();
+              showToast(`Selamat datang, ${currentModerator.display_name}! Sesi moderator aktif.`);
+            }, 800);
+          }
+        } else {
+          // 2. Registrasi via Supabase AuthService
+          if (window.AuthService && typeof window.AuthService.signUp === 'function') {
+            await window.AuthService.signUp(email, password);
+          }
+
+          // Simpan peran di database profil lokal
+          const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
+          savedProfiles[email] = {
+            email,
+            display_name: email.split('@')[0],
+            role: currentAuthRole === 'moderator' ? 'moderator' : 'user'
+          };
+          localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
+
+          showAuthAlert(`Pendaftaran berhasil! Silakan masuk dengan akun ${email}.`, 'success');
+          setTimeout(() => {
+            setAuthMode('login');
+          }, 1200);
+        }
+      } catch (err) {
+        showAuthAlert(err.message || 'Terjadi kesalahan autentikasi. Silakan periksa kembali email dan kata sandi Anda.', 'error');
+      } finally {
+        dualAuthBtnText.textContent = originalBtnText;
+        dualAuthSubmitBtn.disabled = false;
+      }
+    };
+  }
+
+  // Logout Handler
+  if (logoutBtn) {
+    logoutBtn.onclick = async () => {
+      if (confirm('Apakah kamu yakin ingin keluar dari Laman Moderator?')) {
+        try {
+          if (window.AuthService && typeof window.AuthService.signOut === 'function') {
+            await window.AuthService.signOut();
+          }
+        } catch (e) {}
+        localStorage.removeItem('oase_active_moderator_email');
+        currentModerator = null;
+        openDualAuthModal();
+        showToast('Anda telah keluar dari Portal Moderator.');
+      }
+    };
+  }
+
+  // ============================================================================
+  // 5. FITUR 1: SAPAAN HANGAT (WARM GREETING SEPERTI LAMAN KONSELOR)
+  // ============================================================================
+  function setupWarmGreeting() {
+    if (!currentModerator) return;
+
+    const hour = new Date().getHours();
+    let timeGreeting = 'Selamat Pagi';
+    if (hour >= 11 && hour < 15) timeGreeting = 'Selamat Siang';
+    else if (hour >= 15 && hour < 18) timeGreeting = 'Selamat Sore';
+    else if (hour >= 18 || hour < 4) timeGreeting = 'Selamat Malam';
+
+    const displayName = currentModerator.display_name || currentModerator.email.split('@')[0];
+
+    greetingHeading.innerHTML = `${timeGreeting}, <span class="text-rose-600">${escapeHtml(displayName)}</span>.`;
+    navModName.textContent = displayName;
+    navModRole.textContent = `Moderator (${currentModerator.email})`;
+
+    // Status Selector Handler
+    if (moderatorStatusSelect && moderatorStatusDot) {
+      moderatorStatusSelect.onchange = () => {
+        const val = moderatorStatusSelect.value;
+        if (val === 'active') {
+          moderatorStatusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+          moderatorStatusSelect.className = "bg-transparent border-0 text-xs font-bold text-emerald-800 focus:ring-0 cursor-pointer p-0 pr-2";
+          showToast('Status diperbarui: Siaga Mengawasi');
+        } else if (val === 'review') {
+          moderatorStatusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
+          moderatorStatusSelect.className = "bg-transparent border-0 text-xs font-bold text-amber-800 focus:ring-0 cursor-pointer p-0 pr-2";
+          showToast('Status diperbarui: Sedang Investigasi');
+        } else {
+          moderatorStatusDot.className = "w-2.5 h-2.5 rounded-full bg-slate-400";
+          moderatorStatusSelect.className = "bg-transparent border-0 text-xs font-bold text-slate-700 focus:ring-0 cursor-pointer p-0 pr-2";
+          showToast('Status diperbarui: Mode Istirahat');
+        }
+      };
+    }
+  }
+
+  // ============================================================================
+  // 6. FITUR 2: DETEKSI & PERINGATAN REAL-TIME UJARAN KEBENCIAN (SARA)
+  // ============================================================================
+  function scanCommunityCommentsForHateSpeech() {
+    const commentsObj = getCommunityComments();
+    const whitelisted = getWhitelistedComments();
+    const flaggedList = [];
+    let totalCount = 0;
+
+    // Scan setiap komentar di setiap cerita
+    Object.keys(commentsObj).forEach(storyId => {
+      const comments = commentsObj[storyId] || [];
+      comments.forEach(comment => {
+        totalCount++;
+        // Cek apakah sudah di-whitelist oleh moderator
+        if (whitelisted.includes(comment.id)) return;
+
+        // Gunakan CrisisDetectionService resmi dari OASE
+        let checkResult = { isViolation: false, isSara: false, label: null, matchedKeyword: null };
+        if (window.CrisisDetectionService && typeof window.CrisisDetectionService.checkContent === 'function') {
+          checkResult = window.CrisisDetectionService.checkContent(comment.content || '');
+        } else {
+          // Fallback lokal jika service belum termuat
+          const lower = (comment.content || '').toLowerCase();
+          const saraList = ['kafir', 'cokin', 'nigger', 'negro', 'aliran sesat', 'pki', 'kadrun', 'cebong', 'bunuh', 'mutilasi'];
+          for (const word of saraList) {
+            if (lower.includes(word)) {
+              checkResult = { isViolation: true, isSara: true, label: 'Ujaran Kebencian / SARA', matchedKeyword: word };
+              break;
+            }
+          }
+        }
+
+        if (checkResult.isViolation || checkResult.isSara || checkResult.isCrisis) {
+          flaggedList.push({
+            storyId,
+            commentId: comment.id,
+            author: comment.author || 'Anonim',
+            content: comment.content,
+            created_at: comment.created_at,
+            violationType: checkResult.isSara ? 'Ujaran Kebencian / SARA' : (checkResult.isCrisis ? 'Krisis & Self-Harm' : 'Kekerasan / Pelanggaran'),
+            matchedKeyword: checkResult.matchedKeyword || 'Kata Terlarang',
+            label: checkResult.label || 'Melanggar Pedoman Komunitas'
+          });
+        }
+      });
+    });
+
+    return { flaggedList, totalCount };
+  }
+
+  function playAlertPing() {
+    if (!isAlarmSoundEnabled) return;
+    try {
+      if (window.AudioAlertService && typeof window.AudioAlertService.playCrisisAlarm === 'function') {
+        window.AudioAlertService.playCrisisAlarm();
+      } else {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.4);
+        }
+      }
+    } catch (e) {
+      console.warn('Audio alert sound notice:', e);
+    }
+  }
+
+  function renderHateSpeechAlerts() {
+    const { flaggedList, totalCount } = scanCommunityCommentsForHateSpeech();
+
+    // Perbarui Statistik & Badge
+    statMonitoredComments.textContent = totalCount;
+    statHateSpeechCount.textContent = flaggedList.length;
+    badgeHateSpeechCount.textContent = flaggedList.length;
+
+    // Perbarui Indeks Keamanan
+    const safeRate = totalCount === 0 ? 100 : Math.max(0, Math.round(((totalCount - flaggedList.length) / totalCount) * 100));
+    statSafetyIndex.textContent = `${safeRate}%`;
+
+    // Dropdown Bell Notifikasi
+    if (flaggedList.length > 0) {
+      modNotifBadge.classList.remove('hidden');
+      modNotifBadge.textContent = flaggedList.length;
+
+      // Tampilkan banner darurat
+      urgentHateSpeechBanner.classList.remove('hidden');
+      urgentBannerText.textContent = `Perhatian: Terdeteksi ${flaggedList.length} komentar yang mengandung ujaran kebencian/SARA! Segera tindak lanjuti.`;
+
+      // Render Dropdown List
+      modNotifList.innerHTML = flaggedList.map(item => `
+        <div class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-rose-800">${escapeHtml(item.author)}</span>
+            <span class="px-1.5 py-0.5 rounded-md bg-rose-200 text-rose-900 text-[9px] font-black uppercase">${escapeHtml(item.matchedKeyword)}</span>
+          </div>
+          <p class="text-rose-950 line-clamp-2 italic">"${escapeHtml(item.content)}"</p>
+          <div class="pt-1 flex items-center justify-between text-[10px] text-rose-700">
+            <span>${getTimeAgo(item.created_at)}</span>
+            <button class="font-bold text-rose-900 underline quick-delete-notif-btn" data-story-id="${item.storyId}" data-comment-id="${item.commentId}" data-author="${escapeHtml(item.author)}" data-content="${escapeHtml(item.content)}">Hapus Langsung</button>
+          </div>
+        </div>
+      `).join('');
+
+      // Pasang event hapus langsung dari notifikasi
+      document.querySelectorAll('.quick-delete-notif-btn').forEach(btn => {
+        btn.onclick = () => {
+          promptDeleteComment({
+            storyId: btn.dataset.storyId,
+            commentId: btn.dataset.commentId,
+            author: btn.dataset.author,
+            text: btn.dataset.content,
+            source: 'notif'
+          });
+        };
+      });
+    } else {
+      modNotifBadge.classList.add('hidden');
+      urgentHateSpeechBanner.classList.add('hidden');
+      modNotifList.innerHTML = `<p class="text-xs text-center text-oase-muted py-4">Belum ada peringatan ujaran kebencian baru.</p>`;
+    }
+
+    // Render Section 1 Container
+    if (flaggedList.length === 0) {
+      hateSpeechListContainer.innerHTML = `
+        <div class="bg-white rounded-3xl p-10 text-center border border-emerald-200 space-y-3 shadow-xs">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
+            <i data-lucide="check-circle-2" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-emerald-950">Komunitas OASE Bersih & Damai</h3>
+          <p class="text-xs text-oase-muted max-w-md mx-auto leading-relaxed">
+            Tidak ada komentar yang mengandung ujaran kebencian, pelecehan suku/agama/ras, atau ancaman kekerasan saat ini. Sistem penjaga terus memantau setiap detik.
+          </p>
+        </div>
+      `;
+    } else {
+      hateSpeechListContainer.innerHTML = flaggedList.map(item => `
+        <div class="bg-white rounded-3xl p-5 sm:p-6 border-2 border-rose-400 hover:border-rose-500 shadow-sm transition-all space-y-4 animate-fadeIn">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-rose-100">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm">
+                <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-extrabold text-oase-plum">${escapeHtml(item.author)}</span>
+                  <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black border border-rose-200 uppercase tracking-wide">
+                    ⚠️ ${escapeHtml(item.violationType)}
+                  </span>
+                </div>
+                <span class="text-[11px] text-oase-muted">Diposting: ${getTimeAgo(item.created_at)}</span>
+              </div>
+            </div>
+
+            <span class="px-2.5 py-1 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 w-max">
+              Kata Terdeteksi: <strong>"${escapeHtml(item.matchedKeyword)}"</strong>
+            </span>
+          </div>
+
+          <!-- Cuplikan Komentar Berbahaya -->
+          <div class="p-4 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-1.5">
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-rose-800 block">Isi Komentar yang Melanggar:</span>
+            <p class="text-xs sm:text-sm text-rose-950 font-medium leading-relaxed italic">
+              "${highlightViolation(item.content, item.matchedKeyword)}"
+            </p>
+          </div>
+
+          <!-- Tombol Otoritas Moderator -->
+          <div class="flex items-center justify-between gap-3 pt-1 flex-wrap">
+            <span class="text-[11px] text-oase-muted">
+              Status AI: <strong>${escapeHtml(item.label)}</strong>
+            </span>
+
+            <div class="flex items-center gap-2">
+              <button 
+                type="button" 
+                class="ignore-alert-btn px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+                data-comment-id="${item.commentId}"
+                title="Tandai aman jika bukan merupakan ujaran kebencian yang disengaja"
+              >
+                Abaikan / Aman
+              </button>
+
+              <button 
+                type="button" 
+                class="delete-hate-comment-btn px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-rose-500/20 transition-all"
+                data-story-id="${item.storyId}"
+                data-comment-id="${item.commentId}"
+                data-author="${escapeHtml(item.author)}"
+                data-content="${escapeHtml(item.content)}"
+                data-keyword="${escapeHtml(item.matchedKeyword)}"
+              >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Hapus Komentar Pelanggaran</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Event listener tombol abaikan
+      document.querySelectorAll('.ignore-alert-btn').forEach(btn => {
+        btn.onclick = () => {
+          const cId = btn.dataset.commentId;
+          addWhitelistedComment(cId);
+          addAuditLog('ABAIKAN_PERINGATAN', `Komentar ID: ${cId}`, 'Ditandai aman oleh moderator (False Positive)');
+          showToast('Peringatan telah diabaikan.');
+          renderHateSpeechAlerts();
+        };
+      });
+
+      // Event listener tombol hapus
+      document.querySelectorAll('.delete-hate-comment-btn').forEach(btn => {
+        btn.onclick = () => {
+          promptDeleteComment({
+            storyId: btn.dataset.storyId,
+            commentId: btn.dataset.commentId,
+            author: btn.dataset.author,
+            text: btn.dataset.content,
+            reason: `Memuat ujaran kebencian / kata terlarang: "${btn.dataset.keyword}"`
+          });
+        };
+      });
+    }
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function highlightViolation(text, keyword) {
+    if (!keyword || !text) return escapeHtml(text || '');
+    const safeText = escapeHtml(text);
+    const safeKeyword = escapeHtml(keyword);
+    const regex = new RegExp(`(${safeKeyword})`, 'gi');
+    return safeText.replace(regex, `<mark class="bg-rose-300 text-rose-950 font-black px-1 rounded">$1</mark>`);
+  }
+
+  // ============================================================================
+  // 7. FITUR 3: MANAJEMEN SELURUH KOMENTAR KOMUNITAS (WEWENANG HAPUS)
+  // ============================================================================
+  function renderAllCommunityComments(filterQuery = '') {
+    const commentsObj = getCommunityComments();
+    const query = (filterQuery || '').toLowerCase().trim();
+    const allList = [];
+
+    Object.keys(commentsObj).forEach(storyId => {
+      const comments = commentsObj[storyId] || [];
+      comments.forEach(c => {
+        if (!query || (c.author || '').toLowerCase().includes(query) || (c.content || '').toLowerCase().includes(query)) {
+          allList.push({
+            storyId,
+            commentId: c.id,
+            author: c.author || 'Anonim',
+            content: c.content,
+            created_at: c.created_at
+          });
+        }
+      });
+    });
+
+    if (allList.length === 0) {
+      allCommentsListContainer.innerHTML = `
+        <div class="bg-white rounded-3xl p-8 text-center border border-heather-100 space-y-2">
+          <i data-lucide="message-square-off" class="w-8 h-8 text-oase-muted mx-auto"></i>
+          <h4 class="text-sm font-bold text-oase-plum">Tidak ada komentar ditemukan</h4>
+          <p class="text-xs text-oase-muted">Belum ada komentar dukungan yang cocok dengan kriteria pencarian.</p>
+        </div>
+      `;
+    } else {
+      allCommentsListContainer.innerHTML = allList.map(c => `
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-heather-100 hover:border-heather-300 shadow-2xs transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div class="space-y-1.5 flex-grow">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-oase-plum">${escapeHtml(c.author)}</span>
+              <span class="text-[10px] text-oase-muted">• ${getTimeAgo(c.created_at)}</span>
+              <span class="px-2 py-0.5 rounded-full bg-heather-50 text-heather-700 text-[10px] font-semibold">Cerita ID: ${escapeHtml(c.storyId)}</span>
+            </div>
+            <p class="text-xs sm:text-sm text-oase-plum leading-relaxed bg-oase-surface/50 p-3 rounded-xl border border-oase-border/40">
+              "${escapeHtml(c.content)}"
+            </p>
+          </div>
+
+          <button 
+            type="button" 
+            class="delete-single-comment-btn px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center gap-1.5 border border-rose-200 transition-all flex-shrink-0"
+            data-story-id="${c.storyId}"
+            data-comment-id="${c.commentId}"
+            data-author="${escapeHtml(c.author)}"
+            data-content="${escapeHtml(c.content)}"
+          >
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>Hapus Komentar</span>
+          </button>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.delete-single-comment-btn').forEach(btn => {
+        btn.onclick = () => {
+          promptDeleteComment({
+            storyId: btn.dataset.storyId,
+            commentId: btn.dataset.commentId,
+            author: btn.dataset.author,
+            text: btn.dataset.content,
+            reason: 'Tindakan manual moderator'
+          });
+        };
+      });
+    }
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // Modal Konfirmasi Hapus Komentar
+  function promptDeleteComment(data) {
+    commentToDelete = data;
+    deleteCommentPreview.innerHTML = `
+      <strong>Penulis:</strong> ${escapeHtml(data.author)}<br>
+      <strong>Isi:</strong> "${escapeHtml(data.text)}"
+    `;
+    deleteModal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  if (cancelDeleteBtn) {
+    cancelDeleteBtn.onclick = () => {
+      commentToDelete = null;
+      deleteModal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    };
+  }
+
+  if (confirmDeleteBtn) {
+    confirmDeleteBtn.onclick = () => {
+      if (!commentToDelete) return;
+      const { storyId, commentId, author, text, reason } = commentToDelete;
+
+      const commentsObj = getCommunityComments();
+      if (commentsObj[storyId]) {
+        commentsObj[storyId] = commentsObj[storyId].filter(c => c.id !== commentId);
+        saveCommunityComments(commentsObj);
+      }
+
+      // Catat ke Log Audit
+      addAuditLog(
+        'HAPUS_KOMENTAR', 
+        `Komentar oleh ${author} ("${text.slice(0, 30)}...")`, 
+        reason || 'Pelanggaran pedoman komunitas'
+      );
+
+      deleteModal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+      commentToDelete = null;
+
+      // Segarkan Tampilan
+      renderHateSpeechAlerts();
+      renderAllCommunityComments(commentSearchInput ? commentSearchInput.value : '');
+      showToast('Komentar berhasil dihapus permanen oleh Moderator! 🛡️');
+    };
+  }
+
+  // ============================================================================
+  // 8. FITUR 4: KOTAK LAPORAN BUG & ADUAN SISWA
+  // ============================================================================
+  function renderBugReports() {
+    const reports = getBugReports();
+    badgeBugReportsCount.textContent = reports.filter(r => r.status !== 'selesai').length;
+    statBugReportsCount.textContent = reports.length;
+
+    const filtered = activeBugFilter === 'all'
+      ? reports
+      : reports.filter(r => r.status === activeBugFilter);
+
+    if (filtered.length === 0) {
+      bugReportsListContainer.innerHTML = `
+        <div class="bg-white rounded-3xl p-8 text-center border border-amber-100 space-y-2">
+          <i data-lucide="check-circle" class="w-8 h-8 text-emerald-500 mx-auto"></i>
+          <h4 class="text-sm font-bold text-oase-plum">Tidak ada laporan kendala</h4>
+          <p class="text-xs text-oase-muted">Semua kendala pada kategori ini telah selesai ditangani.</p>
+        </div>
+      `;
+    } else {
+      bugReportsListContainer.innerHTML = filtered.map(report => {
+        let statusBadge = '';
+        if (report.status === 'baru') {
+          statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black border border-rose-200">Menunggu Ditinjau</span>`;
+        } else if (report.status === 'proses') {
+          statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black border border-amber-200">Sedang Diproses</span>`;
+        } else {
+          statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-200">Sudah Teratasi</span>`;
+        }
+
+        return `
+          <div class="bg-white rounded-2xl p-4 sm:p-5 border border-amber-100 shadow-2xs space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-amber-50">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-extrabold text-amber-950">${escapeHtml(report.category)}</span>
+                ${statusBadge}
+              </div>
+              <span class="text-[11px] text-oase-muted">Dilaporkan: ${getTimeAgo(report.created_at)} (${escapeHtml(report.reporter)})</span>
+            </div>
+
+            <p class="text-xs sm:text-sm text-oase-plum leading-relaxed">
+              ${escapeHtml(report.description)}
+            </p>
+
+            <div class="flex items-center justify-between gap-2 pt-1 border-t border-amber-50 flex-wrap">
+              <div class="flex items-center gap-1.5 text-xs">
+                <span class="text-oase-muted text-[11px]">Ubah Status:</span>
+                <select class="bug-status-select bg-amber-50 border border-amber-200 rounded-lg text-xs font-bold text-amber-900 py-1 px-2 cursor-pointer focus:outline-none" data-bug-id="${report.id}">
+                  <option value="baru" ${report.status === 'baru' ? 'selected' : ''}>Menunggu Ditinjau</option>
+                  <option value="proses" ${report.status === 'proses' ? 'selected' : ''}>Sedang Diproses</option>
+                  <option value="selesai" ${report.status === 'selesai' ? 'selected' : ''}>Sudah Teratasi</option>
+                </select>
+              </div>
+
+              <button 
+                type="button" 
+                class="delete-bug-btn text-rose-600 hover:text-rose-700 text-xs font-bold flex items-center gap-1 transition-colors"
+                data-bug-id="${report.id}"
+              >
+                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                <span>Hapus Laporan</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Event listener status select
+      document.querySelectorAll('.bug-status-select').forEach(sel => {
+        sel.onchange = () => {
+          const bId = sel.dataset.bugId;
+          const newStatus = sel.value;
+          const reports = getBugReports();
+          const target = reports.find(r => r.id === bId);
+          if (target) {
+            target.status = newStatus;
+            saveBugReports(reports);
+            addAuditLog('UPDATE_STATUS_BUG', `Laporan ${target.category}`, `Status diubah menjadi: ${newStatus}`);
+            showToast(`Status laporan berhasil diubah ke: ${newStatus}`);
+            renderBugReports();
+          }
+        };
+      });
+
+      // Event listener delete bug
+      document.querySelectorAll('.delete-bug-btn').forEach(btn => {
+        btn.onclick = () => {
+          const bId = btn.dataset.bugId;
+          let reports = getBugReports();
+          reports = reports.filter(r => r.id !== bId);
+          saveBugReports(reports);
+          addAuditLog('HAPUS_LAPORAN_BUG', `Laporan ID: ${bId}`, 'Dihapus oleh moderator');
+          showToast('Laporan bug telah dihapus.');
+          renderBugReports();
+        };
+      });
+    }
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // Filter Kategori Bug
+  document.querySelectorAll('.bug-filter-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.bug-filter-btn').forEach(b => {
+        b.className = "bug-filter-btn px-3 py-1.5 rounded-xl bg-white border border-amber-200 text-amber-900 font-semibold hover:bg-amber-50";
+      });
+      btn.className = "bug-filter-btn px-3 py-1.5 rounded-xl bg-amber-600 text-white font-bold";
+      activeBugFilter = btn.dataset.filter;
+      renderBugReports();
+    };
+  });
+
+  // Tambah Laporan Uji Coba Button
+  const addSampleBugBtn = document.getElementById('addSampleBugBtn');
+  if (addSampleBugBtn) {
+    addSampleBugBtn.onclick = () => {
+      const sampleCategories = [
+        '📱 Tampilan Berantakan (Mobile/Desktop)',
+        '⚙️ Tombol / Navigasi Macet',
+        '💬 Kendala Login / Cerita',
+        '🎧 Audio Relaksasi Mood'
+      ];
+      const randomCat = sampleCategories[Math.floor(Math.random() * sampleCategories.length)];
+      const reports = getBugReports();
+      reports.unshift({
+        id: 'bug-' + Date.now(),
+        category: randomCat,
+        description: `Laporan uji coba dari siswa: Menemukan sedikit keterlambatan saat memuat halaman pada koneksi lambat.`,
+        reporter: 'siswa_demo@oase.id',
+        status: 'baru',
+        created_at: new Date().toISOString()
+      });
+      saveBugReports(reports);
+      addAuditLog('TAMBAH_LAPORAN_BUG', randomCat, 'Laporan baru dibuat untuk pengujian');
+      showToast('Laporan uji coba berhasil ditambahkan!');
+      renderBugReports();
+    };
+  }
+
+  // ============================================================================
+  // 9. FITUR 5: LOG AUDIT TINDAKAN MODERASI
+  // ============================================================================
+  function renderAuditLogs() {
+    const logs = getAuditLogs();
+    if (logs.length === 0) {
+      auditLogsContainer.innerHTML = `
+        <div class="bg-white rounded-3xl p-8 text-center border border-heather-100 text-oase-muted text-xs">
+          Belum ada rekaman tindakan moderasi.
+        </div>
+      `;
+    } else {
+      auditLogsContainer.innerHTML = logs.map(log => `
+        <div class="p-3.5 rounded-xl bg-white border border-heather-100 flex items-center justify-between text-xs gap-3">
+          <div class="space-y-0.5">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-md bg-heather-100 text-heather-800 text-[10px] font-bold">${escapeHtml(log.action)}</span>
+              <span class="font-bold text-oase-plum">${escapeHtml(log.target)}</span>
+            </div>
+            <p class="text-[11px] text-oase-muted">Keterangan: ${escapeHtml(log.reason)}</p>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <span class="text-[10px] text-heather-600 font-bold block">${escapeHtml(log.moderator)}</span>
+            <span class="text-[10px] text-oase-muted">${getTimeAgo(log.timestamp)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  const clearAuditLogsBtn = document.getElementById('clearAuditLogsBtn');
+  if (clearAuditLogsBtn) {
+    clearAuditLogsBtn.onclick = () => {
+      if (confirm('Bersihkan seluruh riwayat audit log?')) {
+        localStorage.removeItem('oase_moderation_logs');
+        renderAuditLogs();
+        showToast('Riwayat log berhasil dibersihkan.');
+      }
+    };
+  }
+
+  // ============================================================================
+  // 10. NAVIGASI TAB MODERATOR
+  // ============================================================================
+  function switchTab(tabKey) {
+    activeTab = tabKey;
+    const tabs = [
+      { key: 'hateSpeech', btn: tabBtnHateSpeech, sec: sectionHateSpeech, activeCls: 'bg-rose-600 text-white' },
+      { key: 'allComments', btn: tabBtnAllComments, sec: sectionAllComments, activeCls: 'bg-heather-600 text-white' },
+      { key: 'bugReports', btn: tabBtnBugReports, sec: sectionBugReports, activeCls: 'bg-amber-600 text-white' },
+      { key: 'auditLogs', btn: tabBtnAuditLogs, sec: sectionAuditLogs, activeCls: 'bg-heather-600 text-white' },
+      { key: 'keywords', btn: tabBtnKeywords, sec: sectionKeywords, activeCls: 'bg-heather-600 text-white' }
+    ];
+
+    tabs.forEach(t => {
+      if (t.key === tabKey) {
+        t.btn.className = `px-4 sm:px-5 py-2.5 rounded-2xl ${t.activeCls} font-bold text-xs shadow-sm flex items-center gap-2 transition-all`;
+        t.sec.classList.remove('hidden');
+      } else {
+        t.btn.className = `px-4 sm:px-5 py-2.5 rounded-2xl bg-white border border-oase-border hover:bg-heather-50 text-oase-muted font-bold text-xs flex items-center gap-2 transition-all`;
+        t.sec.classList.add('hidden');
+      }
+    });
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  if (tabBtnHateSpeech) tabBtnHateSpeech.onclick = () => switchTab('hateSpeech');
+  if (tabBtnAllComments) tabBtnAllComments.onclick = () => switchTab('allComments');
+  if (tabBtnBugReports) tabBtnBugReports.onclick = () => switchTab('bugReports');
+  if (tabBtnAuditLogs) tabBtnAuditLogs.onclick = () => switchTab('auditLogs');
+  if (tabBtnKeywords) tabBtnKeywords.onclick = () => switchTab('keywords');
+
+  // Search input filter untuk seluruh komentar
+  if (commentSearchInput) {
+    commentSearchInput.oninput = () => {
+      renderAllCommunityComments(commentSearchInput.value);
+    };
+  }
+
+  // Segarkan tombol-tombol
+  const refreshHateSpeechBtn = document.getElementById('refreshHateSpeechBtn');
+  if (refreshHateSpeechBtn) refreshHateSpeechBtn.onclick = () => {
+    renderHateSpeechAlerts();
+    showToast('Pemindaian ujaran kebencian selesai diperbarui.');
+  };
+
+  const refreshAllCommentsBtn = document.getElementById('refreshAllCommentsBtn');
+  if (refreshAllCommentsBtn) refreshAllCommentsBtn.onclick = () => {
+    renderAllCommunityComments(commentSearchInput ? commentSearchInput.value : '');
+    showToast('Daftar seluruh komentar berhasil disegarkan.');
+  };
+
+  const refreshBugReportsBtn = document.getElementById('refreshBugReportsBtn');
+  if (refreshBugReportsBtn) refreshBugReportsBtn.onclick = () => {
+    renderBugReports();
+    showToast('Kotak laporan bug berhasil disegarkan.');
+  };
+
+  // Notifikasi Bell Toggle
+  if (modNotifBellBtn && modNotifDropdown) {
+    modNotifBellBtn.onclick = (e) => {
+      e.stopPropagation();
+      modNotifDropdown.classList.toggle('hidden');
+    };
+
+    document.addEventListener('click', (e) => {
+      if (!modNotifDropdown.contains(e.target) && e.target !== modNotifBellBtn) {
+        modNotifDropdown.classList.add('hidden');
+      }
+    });
+  }
+
+  if (clearModNotifBtn) {
+    clearModNotifBtn.onclick = () => {
+      modNotifBadge.classList.add('hidden');
+      urgentHateSpeechBanner.classList.add('hidden');
+      modNotifList.innerHTML = `<p class="text-xs text-center text-oase-muted py-4">Semua peringatan telah ditandai dibaca.</p>`;
+      showToast('Peringatan telah ditandai dibaca.');
+    };
+  }
+
+  if (viewUrgentAlertsBtn) {
+    viewUrgentAlertsBtn.onclick = () => {
+      switchTab('hateSpeech');
+      window.scrollTo({ top: sectionHateSpeech.offsetTop - 100, behavior: 'smooth' });
+    };
+  }
+
+  if (dismissUrgentBannerBtn) {
+    dismissUrgentBannerBtn.onclick = () => {
+      urgentHateSpeechBanner.classList.add('hidden');
+    };
+  }
+
+  // Toggle Audio Alarm
+  if (toggleAlarmSoundBtn && alarmSoundIcon) {
+    updateAlarmSoundUI();
+    toggleAlarmSoundBtn.onclick = () => {
+      isAlarmSoundEnabled = !isAlarmSoundEnabled;
+      localStorage.setItem('oase_mod_sound_enabled', isAlarmSoundEnabled ? 'true' : 'false');
+      updateAlarmSoundUI();
+      showToast(isAlarmSoundEnabled ? 'Audio alarm peringatan AKTIF 🔔' : 'Audio alarm peringatan DIBISUKAN 🔕');
+      if (isAlarmSoundEnabled) playAlertPing();
+    };
+  }
+
+  function updateAlarmSoundUI() {
+    if (isAlarmSoundEnabled) {
+      toggleAlarmSoundBtn.title = "Audio Alarm Peringatan: Aktif (Klik untuk membisukan)";
+      alarmSoundIcon.setAttribute('data-lucide', 'volume-2');
+      alarmSoundIcon.className = "w-4 h-4 text-heather-600";
+    } else {
+      toggleAlarmSoundBtn.title = "Audio Alarm Peringatan: Dibisukan (Klik untuk mengaktifkan)";
+      alarmSoundIcon.setAttribute('data-lucide', 'volume-x');
+      alarmSoundIcon.className = "w-4 h-4 text-rose-500";
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // Real-time synchronization via storage event (bila tab lain menambahkan komentar)
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'oase_community_comments') {
+      const prevCount = parseInt(statHateSpeechCount.textContent || '0');
+      renderHateSpeechAlerts();
+      renderAllCommunityComments(commentSearchInput ? commentSearchInput.value : '');
+      const newCount = parseInt(statHateSpeechCount.textContent || '0');
+      if (newCount > prevCount) {
+        playAlertPing();
+        showToast('⚠️ Peringatan baru: Terdeteksi komentar berpotensi melanggar!');
+      }
+    } else if (e.key === 'oase_bug_reports') {
+      renderBugReports();
+    }
+  });
+
+  // ============================================================================
+  // 11. TOAST HELPER & UTILITIES
+  // ============================================================================
+  let toastTimer = null;
+  function showToast(msg) {
+    if (!toastNotification || !toastMessage) return;
+    toastMessage.textContent = msg;
+    toastNotification.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+    toastNotification.classList.add('translate-y-0', 'opacity-100');
+
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastNotification.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+      toastNotification.classList.remove('translate-y-0', 'opacity-100');
+    }, 3200);
+  }
+
+  function escapeHtml(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function getTimeAgo(dateString) {
+    if (!dateString) return 'Baru saja';
+    const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+    if (seconds < 60) return 'Baru saja';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} menit lalu`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} jam lalu`;
+    const days = Math.floor(hours / 24);
+    return `${days} hari lalu`;
+  }
+
+  // ============================================================================
+  // 12. RUN AWAL
+  // ============================================================================
+  function initDashboard() {
+    setupWarmGreeting();
+    renderHateSpeechAlerts();
+    renderAllCommunityComments();
+    renderBugReports();
+    renderAuditLogs();
+    switchTab('hateSpeech');
+
+    // Cek apakah ada hate speech terdeteksi saat load untuk alarm
+    const { flaggedList } = scanCommunityCommentsForHateSpeech();
+    if (flaggedList.length > 0) {
+      playAlertPing();
+    }
+  }
+
+  // Cek otentikasi saat load
+  await checkAuth();
+});

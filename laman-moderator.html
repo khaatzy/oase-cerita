@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laman Moderator - OASE Cerita</title>
+  <!-- Favicon / Logo Tab Peramban -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="favicon.png">
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            heather: {
+              50: '#FBF5F9',
+              100: '#F5EBF3',
+              200: '#EBD8E7',
+              300: '#DCB8D4',
+              400: '#C78CBB',
+              500: '#A14189', /* HEATHER MAUVE PRIMARY */
+              600: '#8E3476',
+              700: '#752A62',
+              800: '#5F244F',
+              900: '#3D1533',
+            },
+            oase: {
+              cream: '#FDFBF7',
+              surface: '#FDF7FB',
+              border: '#CCA8C5',
+              plum: '#240B1D',
+              muted: '#553D4F'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-oase-surface text-oase-plum font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-heather-200 selection:text-heather-900">
+
+  <!-- Ambient Glows -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+    <div class="absolute -top-32 -right-32 w-96 h-96 bg-heather-200/40 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/2 -left-32 w-96 h-96 bg-rose-200/25 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-32 right-1/4 w-96 h-96 bg-heather-100/50 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Header / Navigation Bar Moderator -->
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-white/95 border-b border-oase-border shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      
+      <!-- Brand & Moderator Title -->
+      <div class="flex items-center gap-3">
+        <a href="dashboard-awal.html" class="flex items-center gap-2.5 group">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-600 to-heather-600 flex items-center justify-center text-white shadow-md shadow-heather-500/20 group-hover:scale-105 transition-transform">
+            <i data-lucide="shield-alert" class="w-5 h-5"></i>
+          </div>
+          <div class="flex flex-col sm:block">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <span class="text-base sm:text-lg font-extrabold text-heather-700 leading-tight">OASE Cerita</span>
+              <span class="w-max px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-extrabold uppercase tracking-wider border border-rose-200">
+                Laman Moderator
+              </span>
+            </div>
+            <span class="hidden sm:block text-xs text-oase-muted font-medium mt-0.5">Pemantauan Ruang Aman & Penindakan Pelanggaran</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Action & Profile Bar -->
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        
+        <!-- Toggle Nada Alarm Audio -->
+        <button id="toggleAlarmSoundBtn" class="p-2.5 rounded-2xl border border-oase-border hover:bg-heather-50 text-oase-muted hover:text-heather-700 transition-all" title="Nyalakan/Bisukan Audio Peringatan">
+          <i id="alarmSoundIcon" data-lucide="volume-2" class="w-4 h-4 text-heather-600"></i>
+        </button>
+
+        <!-- Notifikasi Ujaran Kebencian / SARA Bell -->
+        <div class="relative">
+          <button id="modNotifBellBtn" class="p-2.5 rounded-2xl border border-oase-border hover:bg-rose-50 text-oase-muted hover:text-rose-600 transition-all relative" title="Peringatan Ujaran Kebencian">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span id="modNotifBadge" class="hidden absolute -top-1 -right-1 px-1.5 py-0.2 bg-rose-600 text-white text-[10px] font-black rounded-full border-2 border-white animate-pulse">0</span>
+          </button>
+          
+          <!-- Dropdown Notifikasi -->
+          <div id="modNotifDropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-3xl border border-heather-200 shadow-2xl p-4 z-50 animate-fadeIn">
+            <div class="flex items-center justify-between pb-3 border-b border-oase-border">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-600"></i>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-oase-plum">Peringatan Pelanggaran</h4>
+              </div>
+              <button id="clearModNotifBtn" class="text-[11px] text-rose-600 hover:underline font-semibold">Tandai Dibaca</button>
+            </div>
+            <div id="modNotifList" class="mt-3 space-y-2 max-h-72 overflow-y-auto pr-1">
+              <p class="text-xs text-center text-oase-muted py-4">Belum ada peringatan ujaran kebencian baru.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profil Moderator Badge -->
+        <div class="hidden md:flex items-center gap-3 bg-white border border-heather-200 px-3.5 py-1.5 rounded-2xl shadow-xs">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-heather-500 to-rose-500 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+            <i data-lucide="user-check" class="w-4 h-4"></i>
+          </div>
+          <div class="text-left">
+            <span id="navModName" class="text-xs font-bold text-oase-plum block truncate max-w-[130px]">Moderator</span>
+            <span id="navModRole" class="text-[10px] text-rose-600 font-extrabold block truncate max-w-[130px]">Otoritas Moderasi</span>
+          </div>
+        </div>
+
+        <!-- Tombol Buka Komunitas Publik -->
+        <a href="komunitas.html" target="_blank" title="Lihat Tampilan Komunitas Publik" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-oase-border hover:bg-heather-50 text-oase-muted hover:text-heather-700 text-xs font-bold transition-all">
+          <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          <span>Komunitas</span>
+        </a>
+
+        <!-- Tombol Keluar -->
+        <button id="logoutBtn" title="Keluar dari Laman Moderator" class="px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all flex items-center gap-1.5">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Keluar</span>
+        </button>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Banner Peringatan Darurat Real-time (Muncul Otomatis Saat Ada SARA) -->
+  <div id="urgentHateSpeechBanner" class="hidden bg-gradient-to-r from-rose-600 via-rose-700 to-heather-700 text-white px-4 py-3 shadow-md animate-fadeIn transition-all">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-3 text-center sm:text-left">
+        <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 animate-bounce">
+          <i data-lucide="alert-octagon" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <span class="text-xs font-extrabold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-md inline-block mr-2">Peringatan Kritis</span>
+          <span id="urgentBannerText" class="text-xs sm:text-sm font-medium">Terdeteksi komentar yang memuat ujaran kebencian atau kata terlarang! Segera lakukan penindakan.</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button id="viewUrgentAlertsBtn" class="px-3.5 py-1.5 rounded-xl bg-white text-rose-700 hover:bg-rose-50 text-xs font-black shadow-xs transition-all">
+          Tinjau Sekarang
+        </button>
+        <button id="dismissUrgentBannerBtn" class="p-1.5 text-white/80 hover:text-white" title="Tutup Banner">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Konten Utama Laman Moderator -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full space-y-8">
+    
+    <!-- 1. Welcoming Hero Banner (Sapaan Hangat seperti Laman Konselor) -->
+    <div class="bg-gradient-to-r from-white via-heather-50/70 to-rose-50/40 rounded-3xl p-6 sm:p-8 border border-heather-200 shadow-md relative overflow-hidden">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+        
+        <!-- Sapaan Teks & Status -->
+        <div class="space-y-2">
+          <div class="inline-flex items-center gap-2 bg-white/90 px-3 py-1 rounded-full border border-heather-200 shadow-2xs">
+            <div id="moderatorStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+            <select id="moderatorStatusSelect" class="bg-transparent border-0 text-xs font-bold text-emerald-800 focus:ring-0 cursor-pointer p-0 pr-2">
+              <option value="active" class="text-oase-plum">🟢 Siaga Mengawasi</option>
+              <option value="review" class="text-oase-plum">🟡 Sedang Investigasi</option>
+              <option value="break" class="text-oase-plum">⚪ Mode Istirahat</option>
+            </select>
+          </div>
+
+          <h1 id="greetingHeading" class="text-2xl sm:text-3xl font-extrabold text-oase-plum tracking-tight">
+            Selamat Bertugas, Moderator.
+          </h1>
+
+          <p class="text-xs sm:text-sm text-oase-muted max-w-2xl leading-relaxed">
+            Terima kasih telah hadir menjaga integritas OASE Cerita. Ruang ini didedikasikan agar setiap siswa merasa aman dari perundungan, ujaran kebencian (SARA), dan pelecehan verbal.
+          </p>
+        </div>
+
+        <!-- 4 Quick Stat Summary Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 flex-shrink-0">
+          
+          <!-- Stat 1: Komentar Dipantau -->
+          <div class="bg-white p-3.5 rounded-2xl border border-oase-border text-center shadow-xs">
+            <span id="statMonitoredComments" class="text-xl sm:text-2xl font-black text-heather-600 block">0</span>
+            <span class="text-[10px] sm:text-[11px] font-semibold text-oase-muted">Komentar Dipantau</span>
+          </div>
+
+          <!-- Stat 2: Peringatan Ujaran Kebencian -->
+          <div class="bg-white p-3.5 rounded-2xl border border-rose-200 text-center shadow-xs bg-rose-50/30">
+            <span id="statHateSpeechCount" class="text-xl sm:text-2xl font-black text-rose-600 block">0</span>
+            <span class="text-[10px] sm:text-[11px] font-bold text-rose-700">Peringatan SARA</span>
+          </div>
+
+          <!-- Stat 3: Laporan Bug Masuk -->
+          <div class="bg-white p-3.5 rounded-2xl border border-amber-200 text-center shadow-xs bg-amber-50/30">
+            <span id="statBugReportsCount" class="text-xl sm:text-2xl font-black text-amber-600 block">0</span>
+            <span class="text-[10px] sm:text-[11px] font-bold text-amber-800">Laporan Bug</span>
+          </div>
+
+          <!-- Stat 4: Indeks Ruang Aman -->
+          <div class="bg-white p-3.5 rounded-2xl border border-emerald-200 text-center shadow-xs bg-emerald-50/30">
+            <span id="statSafetyIndex" class="text-xl sm:text-2xl font-black text-emerald-600 block">100%</span>
+            <span class="text-[10px] sm:text-[11px] font-bold text-emerald-800">Ruang Aman</span>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 2. Navigasi Tab Wewenang Moderator -->
+    <div class="flex flex-wrap items-center gap-2 border-b border-oase-border pb-2">
+      
+      <!-- Tab 1: Peringatan Ujaran Kebencian & SARA -->
+      <button id="tabBtnHateSpeech" class="px-4 sm:px-5 py-2.5 rounded-2xl bg-rose-600 text-white font-bold text-xs shadow-sm flex items-center gap-2 transition-all">
+        <i data-lucide="shield-alert" class="w-4 h-4"></i>
+        <span>Peringatan Ujaran Kebencian</span>
+        <span id="badgeHateSpeechCount" class="px-2 py-0.5 rounded-full bg-white text-rose-700 text-[10px] font-black">0</span>
+      </button>
+
+      <!-- Tab 2: Seluruh Komentar Komunitas -->
+      <button id="tabBtnAllComments" class="px-4 sm:px-5 py-2.5 rounded-2xl bg-white border border-oase-border hover:bg-heather-50 text-oase-muted font-bold text-xs flex items-center gap-2 transition-all">
+        <i data-lucide="message-square" class="w-4 h-4"></i>
+        <span>Manajemen Seluruh Komentar</span>
+      </button>
+
+      <!-- Tab 3: Kotak Laporan Bug Siswa -->
+      <button id="tabBtnBugReports" class="px-4 sm:px-5 py-2.5 rounded-2xl bg-white border border-oase-border hover:bg-heather-50 text-oase-muted font-bold text-xs flex items-center gap-2 transition-all">
+        <i data-lucide="bug" class="w-4 h-4"></i>
+        <span>Laporan Bug & Aduan</span>
+        <span id="badgeBugReportsCount" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">0</span>
+      </button>
+
+      <!-- Tab 4: Log Audit Tindakan -->
+      <button id="tabBtnAuditLogs" class="px-4 sm:px-5 py-2.5 rounded-2xl bg-white border border-oase-border hover:bg-heather-50 text-oase-muted font-bold text-xs flex items-center gap-2 transition-all">
+        <i data-lucide="history" class="w-4 h-4"></i>
+        <span>Log Audit Moderasi</span>
+      </button>
+
+      <!-- Tab 5: Kamus Kata SARA & Aturan -->
+      <button id="tabBtnKeywords" class="px-4 sm:px-5 py-2.5 rounded-2xl bg-white border border-oase-border hover:bg-heather-50 text-oase-muted font-bold text-xs flex items-center gap-2 transition-all">
+        <i data-lucide="book-open" class="w-4 h-4"></i>
+        <span>Kamus Sensor SARA</span>
+      </button>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- SECTION 1: PERINGATAN UJARAN KEBENCIAN & SARA            -->
+    <!-- ======================================================== -->
+    <section id="sectionHateSpeech" class="space-y-5 animate-fadeIn">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-3xl border border-rose-200 shadow-xs">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-rose-900 flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-600"></i>
+            <span>Antrean Tinjauan Ujaran Kebencian & Pelanggaran SARA</span>
+          </h2>
+          <p class="text-xs text-oase-muted">Komentar yang terdeteksi secara otomatis oleh AI Filter & Kamus Anti-SARA OASE. Tindak lanjuti segera untuk menjaga ketertiban.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="refreshHateSpeechBtn" class="px-3 py-2 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-700 text-xs font-bold flex items-center gap-1.5 transition-all">
+            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+            <span>Pindai Ulang</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Container Daftar Peringatan -->
+      <div id="hateSpeechListContainer" class="space-y-4">
+        <!-- Rendered dynamically via JS -->
+      </div>
+
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SECTION 2: MANAJEMEN SELURUH KOMENTAR KOMUNITAS          -->
+    <!-- ======================================================== -->
+    <section id="sectionAllComments" class="hidden space-y-5 animate-fadeIn">
+      
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-heather-100 shadow-xs">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-oase-plum flex items-center gap-2">
+            <i data-lucide="messages-square" class="w-5 h-5 text-heather-600"></i>
+            <span>Daftar Seluruh Komentar Komunitas</span>
+          </h2>
+          <p class="text-xs text-oase-muted">Sebagai moderator, kamu memiliki otoritas penuh untuk menghapus komentar apa pun yang tidak pantas secara langsung.</p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <!-- Search Input -->
+          <div class="relative">
+            <i data-lucide="search" class="w-4 h-4 text-oase-muted absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input 
+              type="text" 
+              id="commentSearchInput" 
+              placeholder="Cari komentar / penulis..." 
+              class="w-full sm:w-64 pl-9 pr-4 py-2 rounded-xl border border-heather-200 text-xs focus:outline-none focus:border-heather-500 bg-oase-surface/50"
+            />
+          </div>
+
+          <button id="refreshAllCommentsBtn" class="p-2.5 rounded-xl border border-heather-200 hover:bg-heather-50 text-heather-700" title="Segarkan Komentar">
+            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Container Daftar Komentar -->
+      <div id="allCommentsListContainer" class="space-y-4">
+        <!-- Rendered dynamically via JS -->
+      </div>
+
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SECTION 3: KOTAK LAPORAN BUG & ADUAN SISWA               -->
+    <!-- ======================================================== -->
+    <section id="sectionBugReports" class="hidden space-y-5 animate-fadeIn">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-amber-200 shadow-xs">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-amber-950 flex items-center gap-2">
+            <i data-lucide="bug" class="w-5 h-5 text-amber-600"></i>
+            <span>Kotak Masuk Laporan Bug & Kendala Siswa</span>
+          </h2>
+          <p class="text-xs text-oase-muted">Kelola pengaduan teknis dari pengguna, ubah status penanganan, dan bantu tim pengembang menuntaskan kendala.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="addSampleBugBtn" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span>Tambah Aduan Uji Coba</span>
+          </button>
+          <button id="refreshBugReportsBtn" class="p-2.5 rounded-xl border border-amber-200 hover:bg-amber-50 text-amber-800" title="Segarkan Aduan">
+            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Kategori Bug -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <button class="bug-filter-btn px-3 py-1.5 rounded-xl bg-amber-600 text-white font-bold" data-filter="all">Semua Laporan</button>
+        <button class="bug-filter-btn px-3 py-1.5 rounded-xl bg-white border border-amber-200 text-amber-900 font-semibold hover:bg-amber-50" data-filter="baru">Menunggu Ditinjau</button>
+        <button class="bug-filter-btn px-3 py-1.5 rounded-xl bg-white border border-amber-200 text-amber-900 font-semibold hover:bg-amber-50" data-filter="proses">Sedang Diproses</button>
+        <button class="bug-filter-btn px-3 py-1.5 rounded-xl bg-white border border-amber-200 text-amber-900 font-semibold hover:bg-amber-50" data-filter="selesai">Sudah Teratasi</button>
+      </div>
+
+      <!-- Container Daftar Laporan Bug -->
+      <div id="bugReportsListContainer" class="space-y-3">
+        <!-- Rendered dynamically via JS -->
+      </div>
+
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SECTION 4: LOG AUDIT TINDAKAN MODERASI                   -->
+    <!-- ======================================================== -->
+    <section id="sectionAuditLogs" class="hidden space-y-5 animate-fadeIn">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-heather-100 shadow-xs">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-oase-plum flex items-center gap-2">
+            <i data-lucide="history" class="w-5 h-5 text-heather-600"></i>
+            <span>Log Audit Otoritas & Tindakan Moderasi</span>
+          </h2>
+          <p class="text-xs text-oase-muted">Catatan permanen setiap tindakan penghapusan komentar, penutupan laporan bug, atau eskalasi krisis.</p>
+        </div>
+        <button id="clearAuditLogsBtn" class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all flex items-center gap-1.5">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>Bersihkan Riwayat Log</span>
+        </button>
+      </div>
+
+      <!-- Container Audit Log Items -->
+      <div id="auditLogsContainer" class="space-y-2.5">
+        <!-- Rendered dynamically via JS -->
+      </div>
+
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SECTION 5: KAMUS KATA TERLARANG & SARA                   -->
+    <!-- ======================================================== -->
+    <section id="sectionKeywords" class="hidden space-y-5 animate-fadeIn">
+      
+      <div class="bg-white p-6 rounded-3xl border border-heather-200 shadow-xs space-y-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-oase-plum flex items-center gap-2">
+            <i data-lucide="book-open" class="w-5 h-5 text-heather-600"></i>
+            <span>Daftar Sensor & Aturan Integritas Komunitas OASE</span>
+          </h2>
+          <p class="text-xs text-oase-muted leading-relaxed">
+            Sistem pengawasan OASE bekerja menggunakan kombinasi pencocokan kata kunci ketat, regex penangkal leet-speak (@, 4, 0, 1, $, 3), serta filter sensor karakter (*, #).
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          
+          <!-- Kategori 1: SARA & Ujaran Kebencian -->
+          <div class="p-4 rounded-2xl bg-rose-50/60 border border-rose-200 space-y-2">
+            <div class="flex items-center gap-2 font-bold text-xs text-rose-800">
+              <i data-lucide="shield-x" class="w-4 h-4 text-rose-600"></i>
+              <span>1. Ujaran Kebencian & SARA</span>
+            </div>
+            <p class="text-[11px] text-rose-900 leading-relaxed">
+              Mencakup hinaan etnis/rasial, sentimen agama, diskriminasi golongan, dan pelecehan suku.
+            </p>
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              <span class="px-2 py-0.5 rounded-md bg-white border border-rose-200 text-rose-800 text-[10px] font-semibold">rasial</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-rose-200 text-rose-800 text-[10px] font-semibold">kafir</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-rose-200 text-rose-800 text-[10px] font-semibold">cokin</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-rose-200 text-rose-800 text-[10px] font-semibold">nigger/negro</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-rose-200 text-rose-800 text-[10px] font-semibold">penista</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-rose-200 text-rose-800 text-[10px] font-semibold">aliran sesat</span>
+            </div>
+          </div>
+
+          <!-- Kategori 2: Kekerasan & Ancaman -->
+          <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
+            <div class="flex items-center gap-2 font-bold text-xs text-amber-800">
+              <i data-lucide="swords" class="w-4 h-4 text-amber-600"></i>
+              <span>2. Ancaman & Kekerasan Fisik</span>
+            </div>
+            <p class="text-[11px] text-amber-900 leading-relaxed">
+              Mencakup ajakan pembunuhan, penyerangan fisik, teror, mutilasi, dan ancaman maut.
+            </p>
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              <span class="px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 text-[10px] font-semibold">bunuh</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 text-[10px] font-semibold">bantai</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 text-[10px] font-semibold">gorok</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 text-[10px] font-semibold">mutilasi</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 text-[10px] font-semibold">ledakkan/bom</span>
+            </div>
+          </div>
+
+          <!-- Kategori 3: Krisis & Self-Harm -->
+          <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200 space-y-2">
+            <div class="flex items-center gap-2 font-bold text-xs text-indigo-800">
+              <i data-lucide="heart-pulse" class="w-4 h-4 text-indigo-600"></i>
+              <span>3. Krisis & Self-Harm</span>
+            </div>
+            <p class="text-[11px] text-indigo-900 leading-relaxed">
+              Mencakup indikasi melukai diri sendiri atau keputusasaan darurat yang memerlukan bantuan konselor.
+            </p>
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              <span class="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-800 text-[10px] font-semibold">bundir</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-800 text-[10px] font-semibold">sayat nadi</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-800 text-[10px] font-semibold">overdosis</span>
+              <span class="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-800 text-[10px] font-semibold">akhirihidup</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- MODAL KONFIRMASI HAPUS KOMENTAR (WEWENANG MODERATOR)     -->
+  <!-- ======================================================== -->
+  <div id="deleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs hidden animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 border border-rose-200 shadow-2xl space-y-4">
+      <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+        <i data-lucide="trash-2" class="w-6 h-6"></i>
+      </div>
+      <div class="text-center space-y-1">
+        <h3 class="text-lg font-bold text-oase-plum">Konfirmasi Hapus Komentar</h3>
+        <p class="text-xs text-oase-muted leading-relaxed">
+          Sebagai moderator, tindakan ini akan menghapus komentar dari seluruh peramban secara permanen dan dicatat ke dalam log audit.
+        </p>
+      </div>
+      <div id="deleteCommentPreview" class="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-100 text-xs italic text-rose-950">
+        <!-- Preview text -->
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-2">
+        <button id="cancelDeleteBtn" type="button" class="py-2.5 rounded-xl border border-oase-border hover:bg-heather-50 text-oase-muted font-bold text-xs transition-all">
+          Batal
+        </button>
+        <button id="confirmDeleteBtn" type="button" class="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-500/20 transition-all flex items-center justify-center gap-1.5">
+          <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+          <span>Hapus Sekarang</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL LOGIN DUA OPSI (USER BIASA VS MODERATOR)           -->
+  <!-- Menggunakan Supabase Auth seperti akun pengguna biasa     -->
+  <!-- ======================================================== -->
+  <div id="dualAuthModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md hidden animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-heather-200 shadow-2xl relative transform transition-all space-y-5">
+      
+      <!-- Tombol Tutup -->
+      <a href="dashboard-awal.html" class="absolute top-5 right-5 text-oase-muted hover:text-heather-700 p-1 rounded-full hover:bg-heather-50 transition-colors" title="Kembali ke Beranda">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </a>
+
+      <!-- Header Modal -->
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-heather-600 text-white flex items-center justify-center mx-auto mb-2 shadow-md shadow-heather-500/20">
+          <i id="authModalIcon" data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <h3 id="authModalTitle" class="text-xl sm:text-2xl font-extrabold text-oase-plum">Portal Akses Masuk</h3>
+        <p class="text-xs text-heather-600 font-semibold">OASE Cerita - Supabase Cloud Authentication</p>
+      </div>
+
+      <!-- DUA OPSI PERAN (USER BIASA VS MODERATOR) -->
+      <div class="p-1 rounded-2xl bg-heather-50 border border-heather-200 grid grid-cols-2 gap-1">
+        <button type="button" id="roleTabUser" class="py-2.5 px-3 rounded-xl text-xs font-bold text-oase-muted hover:text-heather-700 transition-all flex items-center justify-center gap-1.5">
+          <i data-lucide="user" class="w-3.5 h-3.5"></i>
+          <span>User Biasa</span>
+        </button>
+        <button type="button" id="roleTabMod" class="py-2.5 px-3 rounded-xl text-xs font-bold bg-white text-rose-700 shadow-sm transition-all flex items-center justify-center gap-1.5 border border-rose-200">
+          <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+          <span>Moderator</span>
+        </button>
+      </div>
+
+      <!-- Keterangan Mode Peran Aktif -->
+      <div id="roleHelpNotice" class="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-[11px] text-rose-950 flex items-start gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5"></i>
+        <span id="roleHelpText">
+          <strong>Mode Moderator:</strong> Khusus staf pengawas OASE. Masuk untuk mengelola ruang aman, menerima notifikasi SARA, dan mengaudit komentar.
+        </span>
+      </div>
+
+      <!-- Tab Masuk vs Daftar Akun -->
+      <div class="flex rounded-xl bg-oase-surface p-1 border border-oase-border">
+        <button type="button" id="tabAuthSignIn" class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-white text-heather-700 shadow-2xs transition-all">
+          Masuk
+        </button>
+        <button type="button" id="tabAuthSignUp" class="flex-1 py-1.5 text-xs font-bold rounded-lg text-oase-muted hover:text-heather-700 transition-all">
+          Daftar Akun
+        </button>
+      </div>
+
+      <!-- Feedback Alert -->
+      <div id="authAlertBox" class="hidden p-3 rounded-xl text-xs font-medium border"></div>
+
+      <!-- Formulir Login / Signup -->
+      <form id="dualLoginForm" class="space-y-3.5 text-left">
+        <div>
+          <label class="block text-xs font-bold text-oase-plum uppercase tracking-wider mb-1">Alamat Email</label>
+          <input 
+            type="email" 
+            id="dualAuthEmail" 
+            required 
+            placeholder="nama@email.com" 
+            class="w-full px-3.5 py-2.5 rounded-xl border border-oase-border text-xs focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-oase-surface/30"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-oase-plum uppercase tracking-wider mb-1">Kata Sandi</label>
+          <input 
+            type="password" 
+            id="dualAuthPassword" 
+            required 
+            minlength="6" 
+            placeholder="Minimal 6 karakter" 
+            class="w-full px-3.5 py-2.5 rounded-xl border border-oase-border text-xs focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-oase-surface/30"
+          />
+        </div>
+
+        <div class="flex items-center justify-between text-xs">
+          <label class="flex items-center gap-1.5 cursor-pointer text-oase-muted font-medium">
+            <input type="checkbox" id="dualRememberMe" checked class="rounded border-oase-border text-rose-600 focus:ring-rose-400">
+            <span>Ingat Saya</span>
+          </label>
+          <span class="text-[11px] text-rose-600 font-bold">Supabase Auth</span>
+        </div>
+
+        <button 
+          type="submit" 
+          id="dualAuthSubmitBtn" 
+          class="w-full py-3 rounded-xl bg-gradient-to-r from-rose-600 to-heather-600 hover:from-rose-700 hover:to-heather-700 text-white font-bold text-xs shadow-md shadow-rose-500/20 transition-all flex items-center justify-center gap-2"
+        >
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span id="dualAuthBtnText">Masuk sebagai Moderator</span>
+        </button>
+      </form>
+
+      <!-- Tip Cepat / Preset Akun -->
+      <div class="pt-3 border-t border-heather-100 flex items-center justify-between text-[11px] text-oase-muted">
+        <span>Belum punya akun? Klik tab <strong>Daftar Akun</strong></span>
+        <button type="button" id="fillDemoModBtn" class="text-rose-600 font-bold hover:underline">
+          Isi Akun Demo
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Notification Floating -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none bg-oase-plum text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-heather-300 text-xs font-semibold">
+    <div id="toastIconContainer" class="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
+      <i data-lucide="check" class="w-3.5 h-3.5"></i>
+    </div>
+    <span id="toastMessage">Tindakan berhasil diselesaikan.</span>
+  </div>
+
+  <!-- Footer Standar OASE Cerita -->
+  <footer class="bg-white border-t border-oase-border py-6 mt-12 text-center text-xs text-oase-muted">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-heather-700">OASE Cerita</span>
+        <span>• Portal Khusus Moderator & Pemantauan Komunitas</span>
+      </div>
+      <div class="text-[11px]">
+        Dilengkapi Filter Pencegahan SARA, Anti-Spam & Supabase Real-time.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts: Supabase, Client Service, dan Logic Moderator Baru -->
+  <script src="supabaseClient.js"></script>
+  <script src="laman-moderator.js"></script>
+</body>
+</html>
