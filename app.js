@@ -173,18 +173,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (roleTabUser) roleTabUser.addEventListener('click', () => setAuthRole('user'));
   if (roleTabMod) roleTabMod.addEventListener('click', () => setAuthRole('moderator'));
 
-  if (fillDemoAuthBtn) {
-    fillDemoAuthBtn.addEventListener('click', () => {
-      if (authRole === 'moderator') {
-        authEmail.value = 'moderator@oase.id';
-        authPassword.value = 'moderator123';
-      } else {
-        authEmail.value = 'siswa@oase.id';
-        authPassword.value = 'siswa123';
-      }
-    });
-  }
-
   const setAuthMode = (mode) => {
     authMode = mode;
     clearAuthFeedback();

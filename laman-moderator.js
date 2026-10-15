@@ -312,15 +312,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (tabAuthSignIn) tabAuthSignIn.onclick = () => setAuthMode('login');
   if (tabAuthSignUp) tabAuthSignUp.onclick = () => setAuthMode('register');
 
-  if (fillDemoModBtn) {
-    fillDemoModBtn.onclick = () => {
-      dualAuthEmail.value = 'moderator@oase.id';
-      dualAuthPassword.value = 'moderator123';
-      setAuthRole('moderator');
-      setAuthMode('login');
-    };
-  }
-
   if (dualLoginForm) {
     dualLoginForm.onsubmit = async (e) => {
       e.preventDefault();
