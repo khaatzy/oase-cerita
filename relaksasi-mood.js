@@ -239,107 +239,87 @@ document.addEventListener('DOMContentLoaded', async () => {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // 4. SUARA ALAM RELAKSASI BERKUALITAS TINGGI (AUDIO HD ASLI)
-  let activeAudio = null;
+  // 4. SUARA ALAM RELAKSASI ASLI & BERKUALITAS TINGGI (SINGLETON PLAYER)
+  const soundPlayer = document.getElementById('globalSoundscapePlayer');
   let currentPlayingSound = null;
 
-  // Sumber audio lokal & fallback CDN berkecepatan tinggi
+  // Sumber audio asli yang berbeda total karakter suaranya
   const SOUND_SOURCES = {
-    rain: 'audio/rain.mp3',
-    waves: 'audio/ocean.mp3',
-    night: 'audio/night.mp3'
-  };
-
-  const SOUND_FALLBACKS = {
-    rain: 'https://ambient-sound-mixer.vercel.app/audio/rain.mp3',
-    waves: 'https://ambient-sound-mixer.vercel.app/audio/ocean.mp3',
-    night: 'https://ambient-sound-mixer.vercel.app/audio/night.mp3'
+    rain: 'audio/rain.ogg',
+    waves: 'audio/waves.ogg',
+    bowl: 'audio/bowl.ogg'
   };
 
   const SOUND_LABELS = {
     rain: 'Rintik Hujan Damai',
     waves: 'Deburan Ombak Pantai',
-    night: 'Malam Teduh & Jangkrik'
+    bowl: 'Mangkuk Harmoni Meditasi'
   };
 
-  async function playSoundscape(type) {
-    stopSoundscape();
-
-    const localSrc = SOUND_SOURCES[type] || SOUND_SOURCES.rain;
-    const fallbackSrc = SOUND_FALLBACKS[type] || SOUND_FALLBACKS.rain;
-
-    try {
-      const audio = new Audio();
-      audio.loop = true;
-      audio.volume = 0.75;
-      audio.src = localSrc;
-
-      audio.onerror = () => {
-        if (fallbackSrc && audio.src !== fallbackSrc) {
-          audio.src = fallbackSrc;
-          audio.play().catch(e => console.warn('Fallback play error:', e));
-        }
-      };
-
-      await audio.play();
-      activeAudio = audio;
-      currentPlayingSound = type;
-      playSoftChime(523.25);
-    } catch (e) {
-      console.warn('Gagal memutar audio lokal, mencoba jalur cadangan:', e);
-      try {
-        const fallbackAudio = new Audio(fallbackSrc);
-        fallbackAudio.loop = true;
-        fallbackAudio.volume = 0.75;
-        await fallbackAudio.play();
-        activeAudio = fallbackAudio;
-        currentPlayingSound = type;
-        playSoftChime(523.25);
-      } catch (err) {
-        console.error('Pemutaran audio diblokir peramban:', err);
-      }
-    }
-  }
-
   function stopSoundscape() {
-    if (activeAudio) {
-      try {
-        activeAudio.pause();
-        activeAudio.currentTime = 0;
-        activeAudio.src = '';
-      } catch (e) {}
-      activeAudio = null;
+    if (soundPlayer) {
+      soundPlayer.pause();
+      soundPlayer.currentTime = 0;
+      soundPlayer.removeAttribute('src');
+      soundPlayer.load(); // Abort buffering aktif secara bersih
     }
     currentPlayingSound = null;
+
+    // Reset seluruh tombol
+    document.querySelectorAll('.sound-toggle-btn').forEach(b => {
+      const type = b.dataset.sound;
+      const label = type === 'bowl' ? 'Putar Suara Meditasi' : type === 'waves' ? 'Putar Suara Ombak' : 'Putar Suara Hujan';
+      b.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i><span>${label}</span>`;
+      b.classList.remove('bg-heather-500', 'text-white');
+      b.classList.add('bg-white', 'text-heather-800');
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  async function playSoundscape(type) {
+    if (!soundPlayer) return;
+
+    // 1. Matikan audio sebelumnya sepenuhnya
+    stopSoundscape();
+
+    const src = SOUND_SOURCES[type];
+    if (!src) return;
+
+    try {
+      soundPlayer.src = src;
+      soundPlayer.volume = 0.75;
+      currentPlayingSound = type;
+
+      // Update tampilan tombol yang sedang aktif
+      const activeBtn = document.querySelector(`.sound-toggle-btn[data-sound="${type}"]`);
+      if (activeBtn) {
+        activeBtn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5"></i><span>Hentikan Suara</span>`;
+        activeBtn.classList.add('bg-heather-500', 'text-white');
+        activeBtn.classList.remove('bg-white', 'text-heather-800');
+        if (window.lucide) lucide.createIcons();
+      }
+
+      await soundPlayer.play();
+      showToast(`Memutar ${SOUND_LABELS[type]}... 🎧`);
+    } catch (e) {
+      console.warn('Pemutaran audio gagal atau diblokir peramban:', e);
+      stopSoundscape();
+    }
   }
 
   document.querySelectorAll('.sound-toggle-btn').forEach(btn => {
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.preventDefault();
       const soundType = btn.dataset.sound;
 
       if (currentPlayingSound === soundType) {
-        // Stop current
+        // Klik suara yang sama -> Matikan
         stopSoundscape();
-        btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Putar Suara</span>`;
-        btn.classList.remove('bg-heather-500', 'text-white');
-        btn.classList.add('bg-white', 'text-heather-800');
-        showToast('Suara alam dihentikan.');
+        showToast('Suara relaksasi dihentikan.');
       } else {
-        // Reset all buttons
-        document.querySelectorAll('.sound-toggle-btn').forEach(b => {
-          b.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Putar Suara</span>`;
-          b.classList.remove('bg-heather-500', 'text-white');
-          b.classList.add('bg-white', 'text-heather-800');
-        });
-
-        // Start this sound
+        // Putar suara pilihan
         playSoundscape(soundType);
-        btn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5"></i><span>Hentikan Suara</span>`;
-        btn.classList.add('bg-heather-500', 'text-white');
-        btn.classList.remove('bg-white', 'text-heather-800');
-        showToast(`Memutar ${SOUND_LABELS[soundType] || soundType}... 🎧`);
       }
-      lucide.createIcons();
     };
   });
 

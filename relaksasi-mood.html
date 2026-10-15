@@ -251,6 +251,9 @@
         </span>
       </div>
 
+      <!-- Pemutar Audio Global (Singleton - Mencegah Suara Dobel) -->
+      <audio id="globalSoundscapePlayer" loop preload="none" class="hidden"></audio>
+
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <!-- Hujan Asli -->
         <div class="p-4 rounded-2xl border border-heather-100 bg-oase-surface/50 hover:border-heather-300 transition-all space-y-3">
@@ -258,7 +261,7 @@
             <span class="text-xl">🌧️</span>
             <span>Rintik Hujan Damai</span>
           </div>
-          <p class="text-[11px] text-oase-muted">Suara rintik tetesan air hujan asli yang jernih dan berirama untuk membantumu fokus belajar atau tidur nyenyak.</p>
+          <p class="text-[11px] text-oase-muted">Rekaman rintik tetesan air hujan asli yang jernih dan berirama untuk membantumu fokus belajar atau tidur nyenyak.</p>
           <button class="sound-toggle-btn w-full py-2 rounded-xl border border-heather-200 bg-white hover:bg-heather-50 text-heather-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all" data-sound="rain">
             <i data-lucide="play" class="w-3.5 h-3.5"></i>
             <span>Putar Suara Hujan</span>
@@ -278,16 +281,16 @@
           </button>
         </div>
 
-        <!-- Malam Tenang & Jangkrik -->
+        <!-- Mangkuk Meditasi Tibet Asli -->
         <div class="p-4 rounded-2xl border border-heather-100 bg-oase-surface/50 hover:border-heather-300 transition-all space-y-3">
           <div class="flex items-center gap-2.5 font-bold text-sm text-oase-plum">
-            <span class="text-xl">🌙</span>
-            <span>Malam Teduh & Jangkrik</span>
+            <span class="text-xl">🧘</span>
+            <span>Mangkuk Harmoni Meditasi</span>
           </div>
-          <p class="text-[11px] text-oase-muted">Keheningan malam pedesaan dengan derik jangkrik lembut dan semilir angin sejuk penenang overthinking.</p>
-          <button class="sound-toggle-btn w-full py-2 rounded-xl border border-heather-200 bg-white hover:bg-heather-50 text-heather-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all" data-sound="night">
+          <p class="text-[11px] text-oase-muted">Dengung mangkuk meditasi Tibet asli yang beresonansi damai, meredakan kecemasan dan mengistirahatkan pikiran.</p>
+          <button class="sound-toggle-btn w-full py-2 rounded-xl border border-heather-200 bg-white hover:bg-heather-50 text-heather-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all" data-sound="bowl">
             <i data-lucide="play" class="w-3.5 h-3.5"></i>
-            <span>Putar Suara Malam</span>
+            <span>Putar Suara Meditasi</span>
           </button>
         </div>
       </div>
