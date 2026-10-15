@@ -1,4 +1,4 @@
-﻿    lucide.createIcons();
+    lucide.createIcons();
 
     // Parse URL params
     const urlParams = new URLSearchParams(window.location.search);
@@ -317,7 +317,7 @@
       if (!activeSession) return;
 
       if (currentRole === 'counselor') {
-        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
+        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.add('hidden');
         opponentName.textContent = activeSession.user_name || 'Siswa OASE (Anonim)';
         sessionTopicMeta.textContent = `Topik: ${activeSession.topic} • 🔒 Identitas Siswa Anonim`;
         opponentAvatar.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&h=200&q=80';
@@ -546,12 +546,14 @@
       if (chatCrisisBanner) {
         if (hasCrisis && currentRole === 'counselor') {
           chatCrisisBanner.classList.remove('hidden');
+          if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
           const bannerSpan = chatCrisisBanner.querySelector('span');
           if (bannerSpan) {
             bannerSpan.textContent = '🚨 PERINGATAN KEAMANAN & SARA: Pesan dari siswa terdeteksi mengandung kata krisis/SARA. Informasi siswa: ' + (activeSession.user_name || 'Anonim') + ' (' + (activeSession.user_email || 'Email tidak tersedia') + '). Mohon prioritaskan pendampingan!';
           }
         } else {
           chatCrisisBanner.classList.add('hidden');
+          if (viewStudentAuditBtn) viewStudentAuditBtn.classList.add('hidden');
         }
       }
 
@@ -714,7 +716,7 @@
 
       let senderId, senderName;
       if (currentRole === 'counselor') {
-        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
+        // viewStudentAuditBtn only shown if SARA occurs
         senderId = (currentCounselorSession && currentCounselorSession.id) || activeSession.counselor_id || 'counselor-1';
         senderName = (currentCounselorSession && currentCounselorSession.name) || activeSession.counselor_name || 'Konselor OASE';
       } else {

@@ -105,7 +105,7 @@ const CrisisDetectionService = {
     { regex: /b[a*#@4_0-9\W_-]*nt[a*#@4_0-9\W_-]*i/i, keyword: 'bantai', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
     { regex: /m[u*#@o_0-9v\W_-]*t[i*#@!1_0-9\W_-]*l[a*#@4_0-9\W_-]*s[i*#@!1_0-9\W_-]*/i, keyword: 'mutilasi', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
     { regex: /c[o*#@0_0-9\W_-]*k[i*#@!1_0-9\W_-]*n/i, keyword: 'cokin', category: 'sara', label: 'Ujaran Kebencian / SARA (Ras/Etnis)' },
-    { regex: /n[e3*#_0-9\W-]*gr[o0*#_0-9\W-]*|n[i1*#_0-9\W-]*gg[a4e*#_0-9\W-]*/i, keyword: 'slur rasial', category: 'sara', label: 'Ujaran Kebencian / SARA (Ras)' }
+    { regex: /\b(?:n[e3*#@_0-9]*gr[o0*#@_0-9]+|n[i1*#@!_0-9]*gg[a4e3*#@_0-9]+)\b/i, keyword: 'negro/nigger', category: 'sara', label: 'Ujaran Kebencian / SARA (Ras)' }
   ],
 
   // Normalisasi teks untuk leet-speak dasar
@@ -131,13 +131,16 @@ const CrisisDetectionService = {
 
     // 1. Cek Pola Regex Cerdas (Anti bypass: bun#h, b*nuh, b u n u h, k*fir, dll.)
     for (const p of this.PATTERNS) {
-      if (p.regex.test(raw) || p.regex.test(normalized)) {
+      const matchRaw = raw.match(p.regex);
+      const matchNorm = normalized.match(p.regex);
+      if (matchRaw || matchNorm) {
+        const detected = (matchRaw && matchRaw[0]) || (matchNorm && matchNorm[0]) || p.keyword;
         return {
           isCrisis: true, // Untuk kompatibilitas kode lama
           isSara: p.category === 'sara',
           isViolation: true,
           category: p.category,
-          matchedKeyword: p.keyword,
+          matchedKeyword: detected.trim(),
           label: p.label
         };
       }
@@ -542,11 +545,12 @@ const CounselingService = {
     const encryptedContent = window.EncryptionService ? window.EncryptionService.encrypt(storyContent) : storyContent;
 
     // Metadata audit untuk identitas pengirim jika terjadi pelanggaran SARA/krisis
+    const hasViolation = !!(crisisCheck.isSara || crisisCheck.isCrisis || crisisCheck.isViolation);
     const auditMeta = {
-      user_email: userEmail || 'Anonim (Tidak Login)',
-      user_id: userId || null,
-      real_name: userRealName || finalAuthorName,
-      flagged_words: crisisCheck.matchedKeyword || null,
+      user_email: hasViolation ? (userEmail || 'Anonim (Tidak Login)') : null,
+      user_id: hasViolation ? (userId || null) : null,
+      real_name: hasViolation ? (userRealName || finalAuthorName) : null,
+      flagged_words: hasViolation ? (crisisCheck.matchedKeyword || null) : null,
       is_sara: crisisCheck.isSara || false,
       is_crisis: crisisCheck.isCrisis || false,
       category: crisisCheck.category || null,
@@ -620,10 +624,13 @@ const CounselingService = {
       } catch (e) {}
     }
 
-    const userEmail = item.user_email || auditData.user_email || null;
-    const userRealName = item.real_name || auditData.real_name || item.author_name;
-    const flaggedWords = auditData.flagged_words || crisisCheck.matchedKeyword || null;
     const isSara = auditData.is_sara !== undefined ? auditData.is_sara : crisisCheck.isSara;
+    const flaggedWords = auditData.flagged_words || crisisCheck.matchedKeyword || null;
+    const hasViolation = !!(isSara || flaggedWords || isCrisis);
+
+    // Informasi akun HANYA diekspos jika terdeteksi SARA / krisis
+    const userEmail = hasViolation ? (item.user_email || auditData.user_email || null) : null;
+    const userRealName = hasViolation ? (item.real_name || auditData.real_name || null) : null;
 
     return {
       ...item,
