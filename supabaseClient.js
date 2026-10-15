@@ -64,25 +64,135 @@ const EncryptionService = {
 };
 
 // ==============================================================================
-// 2. LAYANAN DETEKSI KRISIS / SELF-HARM (SAFETY & CRISIS DETECTION)
+// 2. LAYANAN DETEKSI KRISIS, SELF-HARM & SARA (SAFETY & INTEGRITY FILTER)
 // ==============================================================================
 const CrisisDetectionService = {
-  KEYWORDS: [
-    'bundir', 'bunuh diri', 'suicide', 'sayat', 'sayat tangan', 'lukai diri', 'melukai diri',
-    'akhiri hidup', 'mengakhiri hidup', 'mau mati', 'ingin mati', 'gak mau hidup', 'tidak mau hidup',
-    'gak kuat hidup', 'capek hidup', 'mau menghilang selamanya', 'cut myself', 'kill myself',
-    'overdosis', 'minum racun', 'gantung diri', 'lompat dari lantai'
+  // 1. Kata Kunci Krisis & Self-Harm
+  CRISIS_KEYWORDS: [
+    'bundir', 'bunuh diri', 'suicide', 'sayat', 'sayat tangan', 'sayat urat', 'iris urat', 'iris nadi',
+    'cutter tangan', 'lukai diri', 'melukai diri', 'self harm', 'selfharm',
+    'akhiri hidup', 'mengakhiri hidup', 'mau mati', 'ingin mati', 'pengen mati', 'gak mau hidup', 'tidak mau hidup',
+    'gak kuat hidup', 'capek hidup', 'lelah hidup', 'gak sanggup hidup', 'mau menghilang selamanya',
+    'cut myself', 'kill myself', 'overdosis', 'minum racun', 'minum baygon', 'minum potas',
+    'gantung diri', 'lompat dari lantai', 'lompat gedung', 'lompat jembatan', 'tabrakkan diri'
   ],
 
+  // 2. Kata Kunci Kekerasan & Ancaman
+  VIOLENCE_KEYWORDS: [
+    'bunuh', 'membunuh', 'pembunuhan', 'dibunuh', 'pembunuh',
+    'bantai', 'membantai', 'pembantaian', 'gorok', 'penggal',
+    'mutilasi', 'menikam', 'tikam', 'tusuk', 'tembak',
+    'bom', 'ledakkan', 'teror', 'teroris', 'racuni',
+    'bakar hidup', 'mati lu', 'mati kamu', 'mampus lu', 'mampus kamu', 'habisi kamu'
+  ],
+
+  // 3. Kata Kunci SARA (Suku, Agama, Ras, Antargolongan & Ujaran Kebencian)
+  SARA_KEYWORDS: [
+    'kafir', 'kristenisasi', 'islamofobia', 'aliran sesat', 'agama sesat', 'murtad', 'penista agama',
+    'anjing kristen', 'islam teroris', 'babi yahudi', 'hina nabi', 'hina tuhan', 'najis lu',
+    'cina cokin', 'cokin', 'chindo', 'aseng', 'asing aseng', 'pribumi monyet', 'non pribumi',
+    'negro', 'nigger', 'nigga', 'monyet hitam', 'papua monyet', 'dasar monyet', 'jawa jongos', 'batak kasar',
+    'kadrun', 'cebong', 'pki biadab', 'komunis laknat', 'genosida'
+  ],
+
+  // 4. Pola Regex Anti-Bypass & Sensor Karakter (#, *, leet-speak, spasi)
+  PATTERNS: [
+    { regex: /(?:mem|di|pe)?b[u*#@o_0-9v\W_-]*n[u*#@o_0-9v\W_-]*h/i, keyword: 'bunuh', category: 'kekerasan', label: 'Pembunuhan / Ancaman Nyawa' },
+    { regex: /b[u*#@o_0-9v\W_-]*nd[i*#@!1_0-9\W_-]*r/i, keyword: 'bundir', category: 'krisis', label: 'Indikasi Bunuh Diri' },
+    { regex: /s[a*#@4_0-9\W_-]*y[a*#@4_0-9\W_-]*t/i, keyword: 'sayat', category: 'krisis', label: 'Indikasi Melukai Diri (Self-Harm)' },
+    { regex: /k[a*#@4_0-9\W_-]*f[i*#@!1_0-9\W_-]*r/i, keyword: 'kafir', category: 'sara', label: 'Ujaran Kebencian / SARA (Agama)' },
+    { regex: /g[o*#@0_0-9\W_-]*r[o*#@0_0-9\W_-]*k/i, keyword: 'gorok', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
+    { regex: /b[a*#@4_0-9\W_-]*nt[a*#@4_0-9\W_-]*i/i, keyword: 'bantai', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
+    { regex: /m[u*#@o_0-9v\W_-]*t[i*#@!1_0-9\W_-]*l[a*#@4_0-9\W_-]*s[i*#@!1_0-9\W_-]*/i, keyword: 'mutilasi', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
+    { regex: /c[o*#@0_0-9\W_-]*k[i*#@!1_0-9\W_-]*n/i, keyword: 'cokin', category: 'sara', label: 'Ujaran Kebencian / SARA (Ras/Etnis)' },
+    { regex: /n[e3*#_0-9\W-]*gr[o0*#_0-9\W-]*|n[i1*#_0-9\W-]*gg[a4e*#_0-9\W-]*/i, keyword: 'slur rasial', category: 'sara', label: 'Ujaran Kebencian / SARA (Ras)' }
+  ],
+
+  // Normalisasi teks untuk leet-speak dasar
+  normalizeText(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.toLowerCase()
+      .replace(/[@4]/g, 'a')
+      .replace(/[0]/g, 'o')
+      .replace(/[1!|]/g, 'i')
+      .replace(/[3]/g, 'e')
+      .replace(/[$5]/g, 's')
+      .replace(/[7]/g, 't')
+      .replace(/[8]/g, 'b');
+  },
+
   checkContent(text) {
-    if (!text || typeof text !== 'string') return { isCrisis: false, matchedKeyword: null };
-    const lower = text.toLowerCase();
-    for (const kw of this.KEYWORDS) {
-      if (lower.includes(kw)) {
-        return { isCrisis: true, matchedKeyword: kw };
+    if (!text || typeof text !== 'string') {
+      return { isCrisis: false, isSara: false, isViolation: false, matchedKeyword: null, category: null, label: null };
+    }
+
+    const raw = text.toLowerCase();
+    const normalized = this.normalizeText(text);
+
+    // 1. Cek Pola Regex Cerdas (Anti bypass: bun#h, b*nuh, b u n u h, k*fir, dll.)
+    for (const p of this.PATTERNS) {
+      if (p.regex.test(raw) || p.regex.test(normalized)) {
+        return {
+          isCrisis: true, // Untuk kompatibilitas kode lama
+          isSara: p.category === 'sara',
+          isViolation: true,
+          category: p.category,
+          matchedKeyword: p.keyword,
+          label: p.label
+        };
       }
     }
-    return { isCrisis: false, matchedKeyword: null };
+
+    // 2. Cek Kosakata SARA
+    for (const kw of this.SARA_KEYWORDS) {
+      if (raw.includes(kw) || normalized.includes(kw)) {
+        return {
+          isCrisis: true,
+          isSara: true,
+          isViolation: true,
+          category: 'sara',
+          matchedKeyword: kw,
+          label: 'Ujaran Kebencian / SARA'
+        };
+      }
+    }
+
+    // 3. Cek Kosakata Kekerasan
+    for (const kw of this.VIOLENCE_KEYWORDS) {
+      if (raw.includes(kw) || normalized.includes(kw)) {
+        return {
+          isCrisis: true,
+          isSara: false,
+          isViolation: true,
+          category: 'kekerasan',
+          matchedKeyword: kw,
+          label: 'Ancaman Kekerasan'
+        };
+      }
+    }
+
+    // 4. Cek Kosakata Krisis & Self-Harm
+    for (const kw of this.CRISIS_KEYWORDS) {
+      if (raw.includes(kw) || normalized.includes(kw)) {
+        return {
+          isCrisis: true,
+          isSara: false,
+          isViolation: true,
+          category: 'krisis',
+          matchedKeyword: kw,
+          label: 'Indikasi Krisis / Melukai Diri'
+        };
+      }
+    }
+
+    return {
+      isCrisis: false,
+      isSara: false,
+      isViolation: false,
+      matchedKeyword: null,
+      category: null,
+      label: null
+    };
   }
 };
 
@@ -173,6 +283,7 @@ const AudioAlertService = {
 
 window.EncryptionService = EncryptionService;
 window.CrisisDetectionService = CrisisDetectionService;
+window.SafetyFilterService = CrisisDetectionService;
 window.AudioAlertService = AudioAlertService;
 
 // Layanan Autentikasi (Auth Service)
@@ -415,7 +526,10 @@ const CounselingService = {
     category,
     counselorId,
     counselorName,
-    storyContent
+    storyContent,
+    userEmail = null,
+    userId = null,
+    userRealName = null
   }) {
     const ticketCode = this.generateTicketCode();
     
@@ -424,8 +538,20 @@ const CounselingService = {
       ? authorName.trim()
       : `User${Math.floor(100 + Math.random() * 900)}`;
 
-    const crisisCheck = window.CrisisDetectionService ? window.CrisisDetectionService.checkContent(storyContent) : { isCrisis: false };
+    const crisisCheck = window.CrisisDetectionService ? window.CrisisDetectionService.checkContent(storyContent) : { isCrisis: false, isSara: false };
     const encryptedContent = window.EncryptionService ? window.EncryptionService.encrypt(storyContent) : storyContent;
+
+    // Metadata audit untuk identitas pengirim jika terjadi pelanggaran SARA/krisis
+    const auditMeta = {
+      user_email: userEmail || 'Anonim (Tidak Login)',
+      user_id: userId || null,
+      real_name: userRealName || finalAuthorName,
+      flagged_words: crisisCheck.matchedKeyword || null,
+      is_sara: crisisCheck.isSara || false,
+      is_crisis: crisisCheck.isCrisis || false,
+      category: crisisCheck.category || null,
+      submitted_at: new Date().toISOString()
+    };
 
     const submissionData = {
       ticket_code: ticketCode,
@@ -439,7 +565,8 @@ const CounselingService = {
       story_content: encryptedContent,
       status: 'menunggu_tanggapan',
       is_crisis: crisisCheck.isCrisis,
-      priority: crisisCheck.isCrisis ? 'krisis' : 'normal'
+      priority: crisisCheck.isCrisis ? 'krisis' : 'normal',
+      transfer_reason: JSON.stringify(auditMeta)
     };
 
     if (!supabaseClient) {
@@ -480,14 +607,36 @@ const CounselingService = {
     }
     const decContent = window.EncryptionService ? window.EncryptionService.decrypt(item.story_content || '') : (item.story_content || '');
     const decReply = (item.counselor_reply && window.EncryptionService) ? window.EncryptionService.decrypt(item.counselor_reply) : item.counselor_reply;
-    const isCrisis = item.is_crisis || (window.CrisisDetectionService ? window.CrisisDetectionService.checkContent(decContent).isCrisis : false);
+    const crisisCheck = window.CrisisDetectionService ? window.CrisisDetectionService.checkContent(decContent) : { isCrisis: false, isSara: false };
+    const isCrisis = item.is_crisis || crisisCheck.isCrisis;
+
+    // Ekstrak metadata audit pengirim dari transfer_reason
+    let auditData = {};
+    if (item.transfer_reason) {
+      try {
+        if (item.transfer_reason.startsWith('{') && item.transfer_reason.endsWith('}')) {
+          auditData = JSON.parse(item.transfer_reason);
+        }
+      } catch (e) {}
+    }
+
+    const userEmail = item.user_email || auditData.user_email || null;
+    const userRealName = item.real_name || auditData.real_name || item.author_name;
+    const flaggedWords = auditData.flagged_words || crisisCheck.matchedKeyword || null;
+    const isSara = auditData.is_sara !== undefined ? auditData.is_sara : crisisCheck.isSara;
+
     return {
       ...item,
       counselor_name: name,
       story_content: decContent,
       counselor_reply: decReply,
       is_crisis: isCrisis,
-      priority: isCrisis ? 'krisis' : (item.priority || 'normal')
+      is_sara: isSara,
+      priority: isCrisis ? 'krisis' : (item.priority || 'normal'),
+      user_email: userEmail,
+      real_name: userRealName,
+      flagged_words: flaggedWords,
+      transfer_reason: (item.transfer_reason && item.transfer_reason.startsWith('{')) ? null : item.transfer_reason
     };
   },
 

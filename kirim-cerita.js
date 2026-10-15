@@ -153,6 +153,42 @@
         return;
       }
 
+      // Cek apakah ada akun pengguna yang sedang login untuk audit identitas
+      let userEmail = null;
+      let userId = null;
+      let userRealName = null;
+
+      try {
+        if (window.AuthService && window.AuthService.getSession) {
+          const authSession = await window.AuthService.getSession();
+          if (authSession && authSession.user) {
+            userEmail = authSession.user.email;
+            userId = authSession.user.id;
+            const profile = await window.AuthService.getUserProfile(userId, userEmail);
+            if (profile) {
+              userRealName = profile.display_name || profile.full_name || null;
+            }
+          }
+        }
+      } catch (err) {}
+
+      if (!userEmail) {
+        try {
+          const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
+          const keys = Object.keys(savedProfiles);
+          if (keys.length > 0) {
+            userEmail = keys[0];
+            userRealName = savedProfiles[userEmail].display_name || savedProfiles[userEmail].full_name || null;
+          }
+        } catch (e) {}
+      }
+
+      // Cek deteksi kata SARA, kekerasan, atau krisis
+      const safetyCheck = window.CrisisDetectionService ? window.CrisisDetectionService.checkContent(storyContent) : { isViolation: false };
+      if (safetyCheck.isViolation) {
+        alert(`⚠️ PERINGATAN SISTEM: Cerita Anda terdeteksi mengandung kata krisis/SARA atau berbahaya ("${safetyCheck.matchedKeyword}"). Sistem telah mencatat aktivitas ini dan informasi akun untuk ditinjau konselor secara prioritas demi keselamatan bersama.`);
+      }
+
       // Tampilkan status loading tombol
       const originalBtnHTML = submitBtn.innerHTML;
       submitBtn.disabled = true;
@@ -173,7 +209,10 @@
           category,
           counselorId,
           counselorName,
-          storyContent
+          storyContent,
+          userEmail,
+          userId,
+          userRealName
         });
 
         // Sukses! Tampilkan modal receipt dengan kode unik

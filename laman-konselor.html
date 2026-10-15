@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
@@ -438,7 +438,21 @@
             <h3 id="modalAuthorName" class="text-base font-bold text-oase-plum">Nama Samaran</h3>
             <p id="modalAuthorMeta" class="text-xs text-oase-muted">Jenjang Pendidikan • Jenis Kelamin</p>
           </div>
+        
+        <!-- Kotak Data Pengirim & Audit Keamanan SARA / Krisis -->
+        <div id="modalSenderAuditBox" class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 mt-2">
+          <div class="flex items-center justify-between font-bold text-oase-plum">
+            <span class="flex items-center gap-1.5"><i data-lucide="shield-alert" class="w-4 h-4 text-heather-600"></i> Informasi Identitas Pengirim & Audit Akun</span>
+            <span id="modalAuditStatusBadge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">Normal</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-oase-muted text-[11px] pt-1">
+            <p><strong>Email Akun:</strong> <span id="modalAuditEmail" class="text-oase-plum font-semibold">-</span></p>
+            <p><strong>Nama Profil:</strong> <span id="modalAuditRealName" class="text-oase-plum font-semibold">-</span></p>
+            <p><strong>Jenjang / Kelas:</strong> <span id="modalAuditEduClass" class="text-oase-plum font-semibold">-</span></p>
+            <p><strong>Kata Terdeteksi:</strong> <span id="modalAuditFlagged" class="text-rose-600 font-bold">-</span></p>
+          </div>
         </div>
+      </div>
       </div>
 
       <!-- Cerita Lengkap User -->

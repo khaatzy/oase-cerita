@@ -82,6 +82,10 @@ CREATE POLICY "Konselor dapat memperbarui balasan dan status"
 ON public.counseling_submissions FOR UPDATE 
 USING (true);
 
+-- Skrip Tambahan Kolom Audit Keamanan (Jalankan di SQL Editor jika ingin kolom terpisah):
+-- ALTER TABLE public.counseling_submissions ADD COLUMN IF NOT EXISTS user_email TEXT;
+-- ALTER TABLE public.counseling_submissions ADD COLUMN IF NOT EXISTS flagged_words TEXT;
+
 -- Data Awal Antrean Curhat untuk Pengujian Konselor
 INSERT INTO public.counseling_submissions 
 (ticket_code, author_name, education_level, grade_class, gender, category, counselor_id, counselor_name, story_content, status, created_at)

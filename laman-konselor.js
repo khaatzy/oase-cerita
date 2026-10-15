@@ -1,4 +1,4 @@
-    lucide.createIcons();
+﻿    lucide.createIcons();
 
     // State Variables
     let currentSession = null;
@@ -322,6 +322,13 @@
               </span>
             </div>
 
+                        ${(story.user_email || story.flagged_words) ? 
+              <div class="flex items-center gap-2 flex-wrap text-[11px] bg-slate-50 p-2 rounded-xl border border-slate-200 text-slate-700">
+                ${story.user_email ? <span class="flex items-center gap-1 font-medium"><i data-lucide="mail" class="w-3 h-3 text-heather-600"></i> <strong class="text-oase-plum"> + story.user_email + </strong></span> : ''}
+                ${story.flagged_words ? <span class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-extrabold flex items-center gap-1">⚠️ Terdeteksi: " + story.flagged_words + "</span> : ''}
+              </div>
+             : ''}
+
             <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-heather-50/70 border border-heather-200 text-heather-800 text-[11px] font-semibold">
               <i data-lucide="tag" class="w-3 h-3 text-heather-500"></i>
               <span>${story.category}</span>
@@ -393,6 +400,37 @@
       modalAuthorName.textContent = story.author_name;
       modalAuthorMeta.textContent = `${story.education_level} ${story.grade_class ? ' • ' + story.grade_class : ''} • Jenis Kelamin: ${story.gender}`;
       modalStoryContent.textContent = story.story_content;
+
+      // Isi Data Investigasi & Audit Pengirim
+      const auditEmailEl = document.getElementById('modalAuditEmail');
+      const auditRealNameEl = document.getElementById('modalAuditRealName');
+      const auditEduClassEl = document.getElementById('modalAuditEduClass');
+      const auditFlaggedEl = document.getElementById('modalAuditFlagged');
+      const auditStatusBadgeEl = document.getElementById('modalAuditStatusBadge');
+
+      if (auditEmailEl) auditEmailEl.textContent = story.user_email || 'Anonim (Tidak Login)';
+      if (auditRealNameEl) auditRealNameEl.textContent = story.real_name || story.author_name || 'Sahabat Anonim';
+      if (auditEduClassEl) auditEduClassEl.textContent = (story.education_level || '-') + (story.grade_class ? ' • ' + story.grade_class : '');
+
+      if (story.flagged_words || story.is_crisis || story.is_sara) {
+        if (auditFlaggedEl) {
+          auditFlaggedEl.textContent = story.flagged_words ? " + story.flagged_words + " ( + (story.is_sara ? 'SARA' : 'Krisis/Bahaya') + ) : 'Indikasi Krisis / SARA Terdeteksi';
+          auditFlaggedEl.className = "text-rose-600 font-extrabold";
+        }
+        if (auditStatusBadgeEl) {
+          auditStatusBadgeEl.textContent = "⚠️ PERINGATAN TERDETEKSI";
+          auditStatusBadgeEl.className = "px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-600 text-white animate-pulse";
+        }
+      } else {
+        if (auditFlaggedEl) {
+          auditFlaggedEl.textContent = "Tidak Ada (Aman)";
+          auditFlaggedEl.className = "text-emerald-600 font-medium";
+        }
+        if (auditStatusBadgeEl) {
+          auditStatusBadgeEl.textContent = "✓ Normal";
+          auditStatusBadgeEl.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800";
+        }
+      }
 
       // Pre-fill existing reply if any
       counselorReplyTextarea.value = story.counselor_reply || '';
@@ -846,7 +884,7 @@
             ${timeInfo}
           </div>
           <div class="flex items-center gap-2">
-            <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>
+            <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>${s.user_email ? `<span class="text-[11px] font-semibold text-heather-600 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200" title="Email terdaftar siswa">${s.user_email}</span>` : '}
             <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold">🔒 Anonim</span>
           </div>
           <p class="text-xs text-heather-700 font-semibold bg-heather-50 p-2 rounded-xl border border-heather-100">Topik: ${s.topic}</p>
@@ -941,7 +979,7 @@
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>
+                <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>${s.user_email ? `<span class="text-[11px] font-semibold text-heather-600 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200" title="Email terdaftar siswa">${s.user_email}</span>` : '}
                 <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold">🔒 Anonim</span>
               </div>
               <p class="text-xs text-heather-700 font-semibold mt-0.5">Topik: ${s.topic}</p>

@@ -1,4 +1,4 @@
-    lucide.createIcons();
+﻿    lucide.createIcons();
 
     // Parse URL params
     const urlParams = new URLSearchParams(window.location.search);
@@ -98,6 +98,7 @@
       // Navigasi Kembali ke Dashboard
       const goBack = () => {
         if (currentRole === 'counselor') {
+        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
           window.location.href = 'laman-konselor.html';
         } else {
           window.location.href = 'dashboard-user.html';
@@ -265,6 +266,7 @@
 
     function updateRoleUI() {
       if (currentRole === 'counselor') {
+        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
         messageInput.placeholder = 'Tulis tanggapan empati untuk siswa...';
       } else {
         messageInput.placeholder = 'Ketik ceritamu untuk konselor...';
@@ -272,11 +274,50 @@
       lucide.createIcons();
     }
 
+    // MODAL AUDIT DATA SISWA (KHUSUS KONSELOR)
+    const viewStudentAuditBtn = document.getElementById('viewStudentAuditBtn');
+    const chatViewStudentBtn = document.getElementById('chatViewStudentBtn');
+    const studentAuditModal = document.getElementById('studentAuditModal');
+    const closeStudentAuditModalBtn = document.getElementById('closeStudentAuditModalBtn');
+    const closeStudentAuditModalBottomBtn = document.getElementById('closeStudentAuditModalBottomBtn');
+    const auditStudentName = document.getElementById('auditStudentName');
+    const auditStudentEmail = document.getElementById('auditStudentEmail');
+    const auditStudentId = document.getElementById('auditStudentId');
+    const auditSessionTopic = document.getElementById('auditSessionTopic');
+    const auditSessionSchedule = document.getElementById('auditSessionSchedule');
+    const auditAlertDetailsBox = document.getElementById('auditAlertDetailsBox');
+    const auditAlertDetailsText = document.getElementById('auditAlertDetailsText');
+
+    function openStudentAuditModal(alertReason = null) {
+      if (!activeSession) return;
+      if (auditStudentName) auditStudentName.textContent = activeSession.user_name || 'Siswa Anonim';
+      if (auditStudentEmail) auditStudentEmail.textContent = activeSession.user_email || 'Anonim (Tidak Login)';
+      if (auditStudentId) auditStudentId.textContent = activeSession.user_id || '-';
+      if (auditSessionTopic) auditSessionTopic.textContent = activeSession.topic || '-';
+      if (auditSessionSchedule) auditSessionSchedule.textContent = (activeSession.booking_date || '-') + ' pukul ' + (activeSession.booking_time || '-') + ' WIB';
+
+      if (alertReason) {
+        if (auditAlertDetailsBox) auditAlertDetailsBox.classList.remove('hidden');
+        if (auditAlertDetailsText) auditAlertDetailsText.textContent = alertReason;
+      } else {
+        if (auditAlertDetailsBox) auditAlertDetailsBox.classList.add('hidden');
+      }
+
+      if (studentAuditModal) studentAuditModal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    if (viewStudentAuditBtn) viewStudentAuditBtn.addEventListener('click', () => openStudentAuditModal());
+    if (chatViewStudentBtn) chatViewStudentBtn.addEventListener('click', () => openStudentAuditModal());
+    if (closeStudentAuditModalBtn) closeStudentAuditModalBtn.addEventListener('click', () => studentAuditModal.classList.add('hidden'));
+    if (closeStudentAuditModalBottomBtn) closeStudentAuditModalBottomBtn.addEventListener('click', () => studentAuditModal.classList.add('hidden'));
+
     // 2. SETUP OPPONENT PROFILE IN HEADER
     function setupOpponentProfile() {
       if (!activeSession) return;
 
       if (currentRole === 'counselor') {
+        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
         opponentName.textContent = activeSession.user_name || 'Siswa OASE (Anonim)';
         sessionTopicMeta.textContent = `Topik: ${activeSession.topic} • 🔒 Identitas Siswa Anonim`;
         opponentAvatar.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&h=200&q=80';
@@ -312,6 +353,7 @@
       endSessionBtn.className = "px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-oase-border bg-white hover:bg-heather-50 text-oase-muted hover:text-heather-700 text-xs font-bold transition-all flex items-center gap-1";
       endSessionBtn.onclick = () => {
         if (currentRole === 'counselor') {
+        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
           window.location.href = 'laman-konselor.html';
         } else {
           window.location.href = 'dashboard-user.html';
@@ -341,6 +383,7 @@
           }
         }
       } else if (currentRole === 'counselor') {
+        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
         if (!sessionData || !sessionData.motivational_message) {
           lockedMotivationActionBtn.classList.remove('hidden');
           lockedMotivationActionBtn.onclick = () => counselorMotivationModal.classList.remove('hidden');
@@ -380,6 +423,7 @@
         if (isSessionLocked) return;
 
         if (currentRole === 'counselor') {
+        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
           // Konselor membuka formulir pesan semangat penutup terlebih dahulu
           counselorMotivationModal.classList.remove('hidden');
         } else {
@@ -502,6 +546,10 @@
       if (chatCrisisBanner) {
         if (hasCrisis && currentRole === 'counselor') {
           chatCrisisBanner.classList.remove('hidden');
+          const bannerSpan = chatCrisisBanner.querySelector('span');
+          if (bannerSpan) {
+            bannerSpan.textContent = '🚨 PERINGATAN KEAMANAN & SARA: Pesan dari siswa terdeteksi mengandung kata krisis/SARA. Informasi siswa: ' + (activeSession.user_name || 'Anonim') + ' (' + (activeSession.user_email || 'Email tidak tersedia') + '). Mohon prioritaskan pendampingan!';
+          }
         } else {
           chatCrisisBanner.classList.add('hidden');
         }
@@ -619,7 +667,7 @@
             <img src="${myPhoto}" alt="Avatar Saya" class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-cover border border-heather-200 shadow-2xs flex-shrink-0 mb-1">
             <div class="p-3 sm:p-3.5 rounded-2xl rounded-br-xs ${showCrisisUI ? 'bg-rose-700 text-white border-2 border-rose-300' : 'bg-heather-500 text-white'} shadow-xs">
               <span class="block text-[9px] sm:text-[10px] font-bold text-heather-100 mb-1 text-right flex items-center justify-end gap-1">
-                ${showCrisisUI ? '<span class="px-1.5 py-0.5 rounded bg-white text-rose-800 text-[9px] font-extrabold">🚨 Krisis</span>' : ''}
+                ${showCrisisUI ? '<span class="px-1.5 py-0.5 rounded bg-white text-rose-800 text-[9px] font-extrabold">🚨 SARA / Krisis</span>' : ''}
                 <span>${currentRole === 'counselor' ? 'Anda (Konselor)' : 'Anda (Siswa)'}</span>
               </span>
               ${bubbleContent}
@@ -636,7 +684,7 @@
             <div class="p-3 sm:p-3.5 rounded-2xl rounded-bl-xs ${showCrisisUI ? 'bg-rose-50 border-2 border-rose-400 text-rose-950 ring-2 ring-rose-200' : 'bg-white border border-heather-200 text-oase-plum'} shadow-xs">
               <span class="block text-[10px] font-bold ${showCrisisUI ? 'text-rose-700' : 'text-heather-600'} mb-1 flex items-center justify-between gap-1">
                 <span>${m.sender_name} (${senderRoleLabel})</span>
-                ${showCrisisUI ? '<span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[9px] font-extrabold animate-pulse">🚨 Perhatian: Krisis</span>' : ''}
+                ${showCrisisUI ? '<span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[9px] font-extrabold animate-pulse">🚨 Perhatian: SARA / Krisis</span>' : ''}
               </span>
               ${bubbleContent}
               <span class="block text-[9px] sm:text-[10px] mt-1 text-right text-oase-muted font-medium">
@@ -655,11 +703,18 @@
     chatForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const text = messageInput.value.trim();
+      if (currentRole === 'user' && text) {
+        const safetyCheck = window.CrisisDetectionService ? window.CrisisDetectionService.checkContent(text) : { isViolation: false };
+        if (safetyCheck.isViolation) {
+          alert('⚠️ PERINGATAN KEAMANAN: Pesan Anda terdeteksi mengandung kata yang dilarang/SARA atau krisis ("' + safetyCheck.matchedKeyword + '"). Sistem telah mencatat pesan dan informasi akun Anda demi keselamatan bersama.');
+        }
+      }
       if (!text || !activeSession) return;
       messageInput.value = '';
 
       let senderId, senderName;
       if (currentRole === 'counselor') {
+        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
         senderId = (currentCounselorSession && currentCounselorSession.id) || activeSession.counselor_id || 'counselor-1';
         senderName = (currentCounselorSession && currentCounselorSession.name) || activeSession.counselor_name || 'Konselor OASE';
       } else {
@@ -753,6 +808,7 @@
         reader.onloadend = async () => {
           let senderId, senderName;
           if (currentRole === 'counselor') {
+        if (viewStudentAuditBtn) viewStudentAuditBtn.classList.remove('hidden');
             senderId = (currentCounselorSession && currentCounselorSession.id) || activeSession.counselor_id || 'counselor-1';
             senderName = (currentCounselorSession && currentCounselorSession.name) || activeSession.counselor_name || 'Konselor OASE';
           } else {

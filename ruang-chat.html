@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id" class="h-full">
 <head>
   <meta charset="UTF-8">
@@ -93,6 +93,12 @@
           <span>Terenkripsi</span>
         </span>
 
+                <!-- Tombol Profil & Audit Siswa (Khusus Konselor) -->
+        <button id="viewStudentAuditBtn" type="button" class="hidden px-2.5 py-1.5 rounded-xl border-2 border-heather-300 bg-white hover:bg-heather-50 text-oase-plum text-xs font-bold transition-all flex items-center gap-1 shadow-2xs" title="Lihat Profil & Email Siswa">
+          <i data-lucide="user-check" class="w-3.5 h-3.5 text-heather-600"></i>
+          <span class="hidden sm:inline">Data Siswa</span>
+        </button>
+
         <!-- Tombol Bantuan Darurat -->
         <button id="chatEmergencyHelpBtn" class="px-2.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all flex items-center gap-1 shadow-2xs" title="Kontak Bantuan Darurat & Laporkan Kendala">
           <i data-lucide="life-buoy" class="w-3.5 h-3.5"></i>
@@ -135,6 +141,10 @@
         <span>🚨 PERINGATAN KRISIS: Pesan ini mengandung indikasi bahaya/melukai diri sendiri. Mohon prioritaskan pendampingan atau arahkan segera ke Fasilitas Bantuan Terdekat atau Hubungi 119!</span>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
+                <button id="chatViewStudentBtn" type="button" class="px-3 py-1.5 rounded-xl bg-rose-900 text-white hover:bg-rose-950 text-xs font-bold transition-all flex items-center gap-1 shadow-xs">
+          <i data-lucide="user" class="w-3.5 h-3.5"></i>
+          <span>Data Siswa</span>
+        </button>
         <button id="chatPlayCrisisAlarmBtn" type="button" class="px-3 py-1.5 rounded-xl bg-white text-rose-700 hover:bg-rose-50 text-xs font-bold transition-all flex items-center gap-1 shadow-xs">
           <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
           <span>Bunyikan Alarm</span>
@@ -455,6 +465,60 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Modal Data Profil & Audit Siswa -->
+  <div id="studentAuditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-oase-plum/60 backdrop-blur-sm hidden animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 border border-heather-100 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-oase-border">
+        <h3 class="text-sm sm:text-base font-bold text-oase-plum flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-5 h-5 text-heather-600"></i>
+          <span>Data Profil & Informasi Siswa</span>
+        </h3>
+        <button id="closeStudentAuditModalBtn" class="p-1.5 rounded-xl hover:bg-heather-50 text-oase-muted hover:text-oase-plum">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-oase-muted">Nama Samaran:</span>
+            <span id="auditStudentName" class="font-bold text-oase-plum text-sm">-</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-oase-muted">Email Akun Terdaftar:</span>
+            <span id="auditStudentEmail" class="font-bold text-heather-700 bg-white px-2 py-0.5 rounded-lg border border-heather-200">-</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-oase-muted">User ID Akun:</span>
+            <span id="auditStudentId" class="font-mono text-[11px] text-slate-600">-</span>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-heather-50/60 border border-heather-200 space-y-1.5">
+          <div class="flex justify-between">
+            <span class="text-oase-muted">Topik Konseling:</span>
+            <span id="auditSessionTopic" class="font-semibold text-oase-plum">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-oase-muted">Jadwal Sesi:</span>
+            <span id="auditSessionSchedule" class="font-semibold text-oase-plum">-</span>
+          </div>
+        </div>
+
+        <div id="auditAlertDetailsBox" class="hidden p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 space-y-1">
+          <span class="font-bold flex items-center gap-1 text-[11px] text-rose-700">
+            <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Catatan Pelanggaran / Deteksi Keamanan:
+          </span>
+          <p id="auditAlertDetailsText" class="text-xs font-semibold">Pesan mengandung kata terlarang.</p>
+        </div>
+      </div>
+
+      <button id="closeStudentAuditModalBottomBtn" class="w-full py-2.5 rounded-xl bg-heather-500 hover:bg-heather-600 text-white font-bold text-xs transition-all shadow-xs">
+        Tutup Informasi
+      </button>
     </div>
   </div>
 
