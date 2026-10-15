@@ -239,109 +239,76 @@ document.addEventListener('DOMContentLoaded', async () => {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // 4. SUARA ALAM RELAKSASI REALTIME (WEB AUDIO API GENERATOR)
-  let activeAudioCtx = null;
-  let activeNoiseNode = null;
-  let activeFilterNode = null;
-  let activeLfo = null;
+  // 4. SUARA ALAM RELAKSASI BERKUALITAS TINGGI (AUDIO HD ASLI)
+  let activeAudio = null;
   let currentPlayingSound = null;
 
-  // Generator Brown Noise (Alami, hangat, mirip suara hujan / ombak asli)
-  function createBrownNoiseBuffer(ctx, seconds = 10) {
-    const bufferSize = ctx.sampleRate * seconds;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    let lastOut = 0.0;
-    for (let i = 0; i < bufferSize; i++) {
-      const white = Math.random() * 2 - 1;
-      // Filter integrasi brownian untuk suara gemuruh alami
-      lastOut = (lastOut + (0.02 * white)) / 1.02;
-      data[i] = lastOut * 3.5;
-    }
-    return buffer;
-  }
+  // Sumber audio lokal & fallback CDN berkecepatan tinggi
+  const SOUND_SOURCES = {
+    rain: 'audio/rain.mp3',
+    waves: 'audio/ocean.mp3',
+    night: 'audio/night.mp3'
+  };
+
+  const SOUND_FALLBACKS = {
+    rain: 'https://ambient-sound-mixer.vercel.app/audio/rain.mp3',
+    waves: 'https://ambient-sound-mixer.vercel.app/audio/ocean.mp3',
+    night: 'https://ambient-sound-mixer.vercel.app/audio/night.mp3'
+  };
+
+  const SOUND_LABELS = {
+    rain: 'Rintik Hujan Damai',
+    waves: 'Deburan Ombak Pantai',
+    night: 'Malam Teduh & Jangkrik'
+  };
 
   async function playSoundscape(type) {
     stopSoundscape();
 
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) {
-      alert('Peramban Anda belum mendukung pemutaran Web Audio.');
-      return;
-    }
+    const localSrc = SOUND_SOURCES[type] || SOUND_SOURCES.rain;
+    const fallbackSrc = SOUND_FALLBACKS[type] || SOUND_FALLBACKS.rain;
 
     try {
-      activeAudioCtx = new AudioCtx();
-      if (activeAudioCtx.state === 'suspended') {
-        await activeAudioCtx.resume();
-      }
+      const audio = new Audio();
+      audio.loop = true;
+      audio.volume = 0.75;
+      audio.src = localSrc;
 
-      const buffer = createBrownNoiseBuffer(activeAudioCtx, 10);
-      activeNoiseNode = activeAudioCtx.createBufferSource();
-      activeNoiseNode.buffer = buffer;
-      activeNoiseNode.loop = true;
+      audio.onerror = () => {
+        if (fallbackSrc && audio.src !== fallbackSrc) {
+          audio.src = fallbackSrc;
+          audio.play().catch(e => console.warn('Fallback play error:', e));
+        }
+      };
 
-      activeFilterNode = activeAudioCtx.createBiquadFilter();
-      const gainNode = activeAudioCtx.createGain();
-
-      if (type === 'rain') {
-        // Hujan: Lowpass hangat dengan volume jelas
-        activeFilterNode.type = 'lowpass';
-        activeFilterNode.frequency.setValueAtTime(1200, activeAudioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.40, activeAudioCtx.currentTime);
-      } else if (type === 'waves') {
-        // Ombak: Filter dinamis dengan LFO ritmis naik-turun
-        activeFilterNode.type = 'lowpass';
-        activeFilterNode.frequency.setValueAtTime(500, activeAudioCtx.currentTime);
-
-        activeLfo = activeAudioCtx.createOscillator();
-        const lfoGain = activeAudioCtx.createGain();
-        activeLfo.frequency.setValueAtTime(0.12, activeAudioCtx.currentTime); // Siklus ombak setiap 8 detik
-        lfoGain.gain.setValueAtTime(320, activeAudioCtx.currentTime);
-        activeLfo.connect(activeFilterNode.frequency);
-        activeLfo.start();
-
-        gainNode.gain.setValueAtTime(0.45, activeAudioCtx.currentTime);
-      } else { // wind
-        // Angin: Bandpass dengan modulasi lembut
-        activeFilterNode.type = 'bandpass';
-        activeFilterNode.frequency.setValueAtTime(420, activeAudioCtx.currentTime);
-        activeFilterNode.Q.setValueAtTime(2.0, activeAudioCtx.currentTime);
-
-        activeLfo = activeAudioCtx.createOscillator();
-        const lfoGain = activeAudioCtx.createGain();
-        activeLfo.frequency.setValueAtTime(0.15, activeAudioCtx.currentTime);
-        lfoGain.gain.setValueAtTime(150, activeAudioCtx.currentTime);
-        activeLfo.connect(activeFilterNode.frequency);
-        activeLfo.start();
-
-        gainNode.gain.setValueAtTime(0.38, activeAudioCtx.currentTime);
-      }
-
-      activeNoiseNode.connect(activeFilterNode);
-      activeFilterNode.connect(gainNode);
-      gainNode.connect(activeAudioCtx.destination);
-
-      activeNoiseNode.start();
+      await audio.play();
+      activeAudio = audio;
       currentPlayingSound = type;
-      playSoftChime(523.25); // Bunyikan notifikasi audio aktif
+      playSoftChime(523.25);
     } catch (e) {
-      console.error('Gagal memutar audio relaksasi:', e);
+      console.warn('Gagal memutar audio lokal, mencoba jalur cadangan:', e);
+      try {
+        const fallbackAudio = new Audio(fallbackSrc);
+        fallbackAudio.loop = true;
+        fallbackAudio.volume = 0.75;
+        await fallbackAudio.play();
+        activeAudio = fallbackAudio;
+        currentPlayingSound = type;
+        playSoftChime(523.25);
+      } catch (err) {
+        console.error('Pemutaran audio diblokir peramban:', err);
+      }
     }
   }
 
   function stopSoundscape() {
-    if (activeLfo) {
-      try { activeLfo.stop(); activeLfo.disconnect(); } catch (e) {}
-      activeLfo = null;
-    }
-    if (activeNoiseNode) {
-      try { activeNoiseNode.stop(); activeNoiseNode.disconnect(); } catch (e) {}
-      activeNoiseNode = null;
-    }
-    if (activeAudioCtx) {
-      try { activeAudioCtx.close(); } catch (e) {}
-      activeAudioCtx = null;
+    if (activeAudio) {
+      try {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+        activeAudio.src = '';
+      } catch (e) {}
+      activeAudio = null;
     }
     currentPlayingSound = null;
   }
@@ -370,7 +337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5"></i><span>Hentikan Suara</span>`;
         btn.classList.add('bg-heather-500', 'text-white');
         btn.classList.remove('bg-white', 'text-heather-800');
-        showToast(`Memutar suara relaksasi ${soundType}...`);
+        showToast(`Memutar ${SOUND_LABELS[soundType] || soundType}... 🎧`);
       }
       lucide.createIcons();
     };
