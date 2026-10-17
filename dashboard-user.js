@@ -61,13 +61,20 @@
 
     // 1. AUTH & SESSION CHECK
     async function initUser() {
-      const session = await window.AuthService.getSession();
+      let session = null;
+      try {
+        session = await window.AuthService.getSession();
+      } catch (e) {}
+
+      const localEmail = localStorage.getItem('oase_active_user_email');
       if (session && session.user) {
         currentUser = session.user;
-      } else {
-        // Fallback local session
-        const localEmail = localStorage.getItem('oase_active_user_email') || 'siswa@oase.id';
+      } else if (localEmail) {
         currentUser = { email: localEmail, id: 'user-' + localEmail.replace(/[^a-zA-Z0-9]/g, '') };
+      } else {
+        // Jika tidak ada sesi aktif siswa, alihkan langsung ke dashboard awal
+        window.location.href = 'dashboard-awal.html';
+        return;
       }
 
       userProfile = await window.AuthService.getUserProfile(currentUser.id, currentUser.email);

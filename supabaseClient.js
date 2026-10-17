@@ -327,13 +327,34 @@ const AuthService = {
 
   // Masuk / Login
   async signIn(email, password) {
+    const cleanEmail = (email || '').toLowerCase().trim();
     if (!supabaseClient) throw new Error('Supabase client belum siap');
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
-    return data;
+
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+      if (error) throw error;
+      return data;
+    } catch (supabaseErr) {
+      // Fallback kredensial lokal untuk akun moderator yang dibuat oleh admin/rekan moderator
+      const modCreds = JSON.parse(localStorage.getItem('oase_moderator_credentials') || '{}');
+      if (modCreds[cleanEmail] && modCreds[cleanEmail].password === password) {
+        const dummyUser = {
+          id: 'mod-' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '_'),
+          email: cleanEmail,
+          user_metadata: { role: 'moderator', display_name: modCreds[cleanEmail].display_name }
+        };
+        const localSession = {
+          user: dummyUser,
+          access_token: 'local-mod-token-' + Date.now()
+        };
+        localStorage.setItem('oase_active_moderator_email', cleanEmail);
+        return { user: dummyUser, session: localSession };
+      }
+      throw supabaseErr;
+    }
   },
 
   // Keluar / Logout
@@ -478,10 +499,22 @@ const AuthService = {
     }
   },
 
-  // Tambah email moderator baru ke whitelist resmi
-  async addModeratorEmail(email, addedBy = 'Moderator Utama') {
+  // Ambil peta seluruh kredensial akun moderator (untuk manajemen & copy akun)
+  getModeratorCredentialsMap() {
+    try {
+      return JSON.parse(localStorage.getItem('oase_moderator_credentials') || '{}');
+    } catch(e) {
+      return {};
+    }
+  },
+
+  // Tambah akun moderator baru lengkap dengan email, password, dan nama panggilan
+  async addModeratorAccount({ email, password, displayName = '', addedBy = 'Moderator Utama' }) {
     if (!email || !email.includes('@')) {
       throw new Error('Alamat email tidak valid.');
+    }
+    if (!password || password.length < 6) {
+      throw new Error('Kata sandi akun moderator minimal 6 karakter.');
     }
     const cleanEmail = email.toLowerCase().trim();
     const currentList = this.getAllModeratorEmails();
@@ -489,39 +522,80 @@ const AuthService = {
       throw new Error('Email ini sudah terdaftar sebagai moderator resmi.');
     }
 
-    // 1. Simpan ke database Supabase jika tabel profiles tersedia
+    const cleanName = (displayName || '').trim() || cleanEmail.split('@')[0];
+
+    // 1. Coba daftarkan akun baru ke Supabase Auth
+    let authUser = null;
+    if (supabaseClient) {
+      try {
+        const { data } = await supabaseClient.auth.signUp({
+          email: cleanEmail,
+          password: password,
+          options: {
+            data: {
+              role: 'moderator',
+              display_name: cleanName
+            }
+          }
+        });
+        if (data && data.user) authUser = data.user;
+      } catch (e) {
+        console.warn('Supabase Auth signUp note:', e.message);
+      }
+    }
+
+    // 2. Simpan ke database Supabase profiles jika ada
     if (supabaseClient) {
       try {
         await supabaseClient.from('profiles').upsert({
+          auth_user_id: authUser ? authUser.id : undefined,
           email: cleanEmail,
           role: 'moderator',
-          display_name: cleanEmail.split('@')[0],
+          display_name: cleanName,
+          full_name: cleanName,
           moderator_approval_status: 'approved',
           updated_at: new Date().toISOString()
         }, { onConflict: 'email' });
       } catch (e) {}
     }
 
-    // 2. Simpan ke dynamic whitelist browser
+    // 3. Simpan kredensial moderator lokal (agar admin bisa melihat/menyalin & langsung login)
+    const modCreds = this.getModeratorCredentialsMap();
+    modCreds[cleanEmail] = {
+      email: cleanEmail,
+      password: password,
+      display_name: cleanName,
+      added_by: addedBy,
+      added_at: new Date().toISOString()
+    };
+    localStorage.setItem('oase_moderator_credentials', JSON.stringify(modCreds));
+
+    // 4. Simpan ke dynamic whitelist browser
     const dynamic = JSON.parse(localStorage.getItem('oase_custom_moderator_whitelist') || '[]');
     if (!dynamic.includes(cleanEmail)) {
       dynamic.push(cleanEmail);
       localStorage.setItem('oase_custom_moderator_whitelist', JSON.stringify(dynamic));
     }
 
-    // 3. Simpan profil lokal
+    // 5. Simpan profil lokal
     const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
     savedProfiles[cleanEmail] = {
       email: cleanEmail,
       role: 'moderator',
-      display_name: cleanEmail.split('@')[0],
+      display_name: cleanName,
+      full_name: cleanName,
       moderator_approval_status: 'approved',
       added_by: addedBy,
       added_at: new Date().toISOString()
     };
     localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
 
-    return { success: true, email: cleanEmail };
+    return { success: true, email: cleanEmail, password, displayName: cleanName };
+  },
+
+  // Kompatibilitas mundur
+  async addModeratorEmail(email, addedBy = 'Moderator Utama') {
+    return this.addModeratorAccount({ email, password: 'ModeratorOase2026!', addedBy });
   },
 
   // Hapus email dari daftar moderator dinamis
@@ -545,6 +619,12 @@ const AuthService = {
     if (savedProfiles[cleanEmail]) {
       savedProfiles[cleanEmail].role = 'user';
       localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
+    }
+
+    const modCreds = this.getModeratorCredentialsMap();
+    if (modCreds[cleanEmail]) {
+      delete modCreds[cleanEmail];
+      localStorage.setItem('oase_moderator_credentials', JSON.stringify(modCreds));
     }
 
     return { success: true };

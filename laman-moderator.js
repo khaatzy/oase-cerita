@@ -274,6 +274,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!dualAuthModal) return;
     dualAuthModal.classList.add('hidden');
     document.body.classList.remove('overflow-hidden');
+    if (!currentModerator) {
+      window.location.href = 'dashboard-awal.html';
+    }
   }
 
   function setAuthRole(role) {
@@ -451,15 +454,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {}
         localStorage.removeItem('oase_active_moderator_email');
         currentModerator = null;
-        openDualAuthModal();
-        showToast('Anda telah keluar dari Portal Moderator.');
+        window.location.href = 'dashboard-awal.html';
       }
     };
   }
 
   // ============================================================================
-  // 5. FITUR 1: SAPAAN HANGAT (WARM GREETING SEPERTI LAMAN KONSELOR)
+  // 5. FITUR 1: SAPAAN HANGAT, HAMBURGER DRAWER & CUSTOM DISPLAY NAME
   // ============================================================================
+  function getActiveModDisplayName() {
+    if (!currentModerator) return 'Moderator';
+    const saved = localStorage.getItem('oase_mod_custom_name_' + currentModerator.email);
+    if (saved && saved.trim()) return saved.trim();
+    let clean = currentModerator.display_name || '';
+    if (!clean || clean.includes('@')) {
+      clean = currentModerator.email ? currentModerator.email.split('@')[0] : 'Moderator';
+    }
+    return clean;
+  }
+
   function setupWarmGreeting() {
     if (!currentModerator) return;
 
@@ -469,14 +482,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (hour >= 15 && hour < 18) timeGreeting = 'Selamat Sore';
     else if (hour >= 18 || hour < 4) timeGreeting = 'Selamat Malam';
 
-    let cleanName = currentModerator.display_name || '';
-    if (!cleanName || cleanName.includes('@')) {
-      cleanName = 'Moderator';
-    }
+    const cleanName = getActiveModDisplayName();
 
-    greetingHeading.innerHTML = `Selamat Datang, <span class="text-rose-600">${escapeHtml(cleanName)}</span>.`;
-    navModName.textContent = cleanName;
-    navModRole.textContent = 'Otoritas Pengawas OASE';
+    if (greetingHeading) {
+      greetingHeading.innerHTML = `${timeGreeting}, <span class="text-rose-600">${escapeHtml(cleanName)}</span>.`;
+    }
+    if (navModName) navModName.textContent = cleanName;
+    if (navModRole) navModRole.textContent = 'Otoritas Pengawas OASE';
+
+    // Update elemen pada Drawer Hamburger
+    const modInitialLabel = document.getElementById('modInitialLabel');
+    const modNameLabel = document.getElementById('modNameLabel');
+    const modEmailLabel = document.getElementById('modEmailLabel');
+    if (modInitialLabel) modInitialLabel.textContent = cleanName.charAt(0).toUpperCase();
+    if (modNameLabel) modNameLabel.textContent = cleanName;
+    if (modEmailLabel) modEmailLabel.textContent = currentModerator.email || 'moderator@oase.id';
 
     // Status Selector Handler
     if (moderatorStatusSelect && moderatorStatusDot) {
@@ -497,6 +517,117 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       };
     }
+  }
+
+  // Hamburger Menu Drawer Handlers
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const hamburgerDrawer = document.getElementById('hamburgerDrawer');
+  const hamburgerDrawerOverlay = document.getElementById('hamburgerDrawerOverlay');
+  const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+  const logoutDrawerBtn = document.getElementById('logoutDrawerBtn');
+
+  function openDrawer() {
+    if (hamburgerDrawerOverlay) hamburgerDrawerOverlay.classList.remove('hidden');
+    if (hamburgerDrawer) hamburgerDrawer.classList.remove('translate-x-full');
+  }
+
+  function closeDrawer() {
+    if (hamburgerDrawer) hamburgerDrawer.classList.add('translate-x-full');
+    if (hamburgerDrawerOverlay) hamburgerDrawerOverlay.classList.add('hidden');
+  }
+
+  if (hamburgerBtn) hamburgerBtn.onclick = openDrawer;
+  if (closeDrawerBtn) closeDrawerBtn.onclick = closeDrawer;
+  if (hamburgerDrawerOverlay) hamburgerDrawerOverlay.onclick = closeDrawer;
+
+  if (logoutDrawerBtn) {
+    logoutDrawerBtn.onclick = async () => {
+      if (confirm('Apakah kamu yakin ingin keluar dari Laman Moderator?')) {
+        try {
+          if (window.AuthService && typeof window.AuthService.signOut === 'function') {
+            await window.AuthService.signOut();
+          }
+        } catch (e) {}
+        localStorage.removeItem('oase_active_moderator_email');
+        currentModerator = null;
+        window.location.href = 'dashboard-awal.html';
+      }
+    };
+  }
+
+  // Custom Display Name Modal Handlers
+  const modDisplayNameModal = document.getElementById('modDisplayNameModal');
+  const closeModDisplayNameModalBtn = document.getElementById('closeModDisplayNameModalBtn');
+  const cancelModDisplayNameBtn = document.getElementById('cancelModDisplayNameBtn');
+  const openChangeModDisplayNameBtn = document.getElementById('openChangeModDisplayNameBtn');
+  const quickChangeModDisplayNameBtn = document.getElementById('quickChangeModDisplayNameBtn');
+  const openChangeModDisplayNameDrawerBtn = document.getElementById('openChangeModDisplayNameDrawerBtn');
+  const changeModDisplayNameForm = document.getElementById('changeModDisplayNameForm');
+  const newModDisplayNameInput = document.getElementById('newModDisplayNameInput');
+
+  function openModDisplayNameModal() {
+    if (!modDisplayNameModal) return;
+    const currentName = getActiveModDisplayName();
+    if (newModDisplayNameInput) {
+      newModDisplayNameInput.value = currentName;
+      newModDisplayNameInput.focus();
+    }
+    modDisplayNameModal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closeModDisplayNameModal() {
+    if (!modDisplayNameModal) return;
+    modDisplayNameModal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  if (openChangeModDisplayNameBtn) openChangeModDisplayNameBtn.onclick = openModDisplayNameModal;
+  if (quickChangeModDisplayNameBtn) quickChangeModDisplayNameBtn.onclick = () => {
+    closeDrawer();
+    openModDisplayNameModal();
+  };
+  if (openChangeModDisplayNameDrawerBtn) openChangeModDisplayNameDrawerBtn.onclick = () => {
+    closeDrawer();
+    openModDisplayNameModal();
+  };
+  if (closeModDisplayNameModalBtn) closeModDisplayNameModalBtn.onclick = closeModDisplayNameModal;
+  if (cancelModDisplayNameBtn) cancelModDisplayNameBtn.onclick = closeModDisplayNameModal;
+
+  document.querySelectorAll('.quick-mod-name-chip').forEach(chip => {
+    chip.onclick = () => {
+      if (newModDisplayNameInput && chip.dataset.name) {
+        newModDisplayNameInput.value = chip.dataset.name;
+      }
+    };
+  });
+
+  if (changeModDisplayNameForm) {
+    changeModDisplayNameForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const newName = newModDisplayNameInput ? newModDisplayNameInput.value.trim() : '';
+      if (!newName) {
+        alert('Mohon masukkan nama atau sapaan Anda.');
+        return;
+      }
+
+      if (currentModerator) {
+        currentModerator.display_name = newName;
+        localStorage.setItem('oase_mod_custom_name_' + currentModerator.email, newName);
+
+        try {
+          if (window.AuthService && typeof window.AuthService.updateDisplayName === 'function') {
+            await window.AuthService.updateDisplayName(currentModerator.id, currentModerator.email, newName);
+          }
+        } catch (err) {
+          console.warn('Supabase profile update fallback:', err);
+        }
+
+        setupWarmGreeting();
+        closeModDisplayNameModal();
+        showToast(`Nama sapaan berhasil diubah menjadi "${newName}"! ✨`);
+      }
+    };
   }
 
   // ============================================================================
@@ -1222,6 +1353,43 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ============================================================================
   // 10. FITUR KHUSUS: MANAJEMEN AKUN MODERATOR RESMI (WHITELIST)
   // ============================================================================
+  // Elemen Form & Password Kelola Akun Moderator
+  const newModPasswordInput = document.getElementById('newModPasswordInput');
+  const newModNameInput = document.getElementById('newModNameInput');
+  const generateModPasswordBtn = document.getElementById('generateModPasswordBtn');
+  const toggleModPasswordVisibilityBtn = document.getElementById('toggleModPasswordVisibilityBtn');
+  const modPasswordEyeIcon = document.getElementById('modPasswordEyeIcon');
+  const addModFeedback = document.getElementById('addModFeedback');
+
+  if (generateModPasswordBtn && newModPasswordInput) {
+    generateModPasswordBtn.onclick = () => {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$*';
+      let pass = 'Mod';
+      for (let i = 0; i < 6; i++) {
+        pass += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      pass += '!26';
+      newModPasswordInput.value = pass;
+      newModPasswordInput.type = 'text';
+      if (modPasswordEyeIcon) modPasswordEyeIcon.setAttribute('data-lucide', 'eye-off');
+      if (window.lucide) lucide.createIcons();
+      showToast('Kata sandi acak berhasil dibuat!');
+    };
+  }
+
+  if (toggleModPasswordVisibilityBtn && newModPasswordInput) {
+    toggleModPasswordVisibilityBtn.onclick = () => {
+      if (newModPasswordInput.type === 'password') {
+        newModPasswordInput.type = 'text';
+        if (modPasswordEyeIcon) modPasswordEyeIcon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        newModPasswordInput.type = 'password';
+        if (modPasswordEyeIcon) modPasswordEyeIcon.setAttribute('data-lucide', 'eye');
+      }
+      if (window.lucide) lucide.createIcons();
+    };
+  }
+
   function renderAuthorizedModerators() {
     if (!authorizedModsList) return;
     const allMods = (window.AuthService && typeof window.AuthService.getAllModeratorEmails === 'function')
@@ -1233,31 +1401,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const defaultMods = (window.AuthService && window.AuthService.MODERATORS_LIST) || [];
+    const credMap = (window.AuthService && typeof window.AuthService.getModeratorCredentialsMap === 'function')
+      ? window.AuthService.getModeratorCredentialsMap()
+      : {};
 
     authorizedModsList.innerHTML = allMods.map(email => {
       const isDefault = defaultMods.some(dm => dm.toLowerCase() === email.toLowerCase());
+      const cred = credMap[email.toLowerCase()];
+      const modDisplayName = cred && cred.displayName ? cred.displayName : '';
+      const password = cred && cred.password ? cred.password : (isDefault ? 'default123' : '');
+
       return `
-        <div class="flex items-center justify-between p-2.5 rounded-xl border border-gray-100 bg-gray-50/70 text-xs">
-          <div class="flex items-center gap-2 overflow-hidden">
-            <div class="w-6 h-6 rounded-full bg-heather-100 text-heather-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-              <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+        <div class="p-3 rounded-2xl border border-gray-100 bg-gray-50/70 text-xs space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 overflow-hidden flex-1">
+              <div class="w-7 h-7 rounded-full bg-heather-100 text-heather-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+              </div>
+              <div class="overflow-hidden">
+                <span class="font-bold text-gray-800 truncate block">${escapeHtml(email)}</span>
+                ${modDisplayName ? `<span class="text-[10px] text-gray-500 block">Sapaan: <strong>${escapeHtml(modDisplayName)}</strong></span>` : ''}
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase flex-shrink-0 ${isDefault ? 'bg-heather-100 text-heather-800' : 'bg-emerald-100 text-emerald-800'}">
+                ${isDefault ? 'Utama' : 'Tambahan'}
+              </span>
             </div>
-            <span class="font-bold text-gray-800 truncate">${escapeHtml(email)}</span>
-            <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${isDefault ? 'bg-heather-100 text-heather-800' : 'bg-emerald-100 text-emerald-800'}">
-              ${isDefault ? 'Utama' : 'Tambahan'}
-            </span>
+
+            ${!isDefault ? `
+              <button class="remove-mod-btn text-gray-400 hover:text-rose-600 p-1 transition-colors flex-shrink-0" data-email="${escapeHtml(email)}" title="Hapus otorisasi moderator">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            ` : `
+              <span class="text-[10px] text-gray-400 font-semibold px-1 flex-shrink-0">Sistem</span>
+            `}
           </div>
 
-          ${!isDefault ? `
-            <button class="remove-mod-btn text-gray-400 hover:text-rose-600 p-1 transition-colors" data-email="${escapeHtml(email)}" title="Hapus otorisasi moderator">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            </button>
-          ` : `
-            <span class="text-[10px] text-gray-400 font-semibold px-1">Sistem</span>
-          `}
+          ${password ? `
+            <div class="flex items-center justify-between pt-1.5 border-t border-gray-200/60 text-[11px] gap-2">
+              <span class="text-gray-500 font-mono text-[10px] truncate">Kata Sandi: <strong class="text-gray-800">${escapeHtml(password)}</strong></span>
+              <button type="button" class="copy-single-cred-btn px-2.5 py-1 rounded-lg bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold text-[10px] flex items-center gap-1 transition-all shadow-2xs flex-shrink-0" data-email="${escapeHtml(email)}" data-pass="${escapeHtml(password)}" data-name="${escapeHtml(modDisplayName || 'Moderator')}">
+                <i data-lucide="copy" class="w-3 h-3 text-heather-600"></i>
+                <span>Salin Kredensial</span>
+              </button>
+            </div>
+          ` : ''}
         </div>
       `;
     }).join('');
+
+    document.querySelectorAll('.copy-single-cred-btn').forEach(btn => {
+      btn.onclick = () => {
+        const text = `Akun Moderator OASE Cerita:\nNama: ${btn.dataset.name}\nEmail: ${btn.dataset.email}\nKata Sandi: ${btn.dataset.pass}\nLogin di: laman-moderator.html`;
+        navigator.clipboard.writeText(text);
+        showToast(`Kredensial untuk ${btn.dataset.email} berhasil disalin!`);
+      };
+    });
 
     document.querySelectorAll('.remove-mod-btn').forEach(btn => {
       btn.onclick = async () => {
@@ -1286,11 +1484,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (manageModsModal) {
         manageModsModal.classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
+        if (addModFeedback) addModFeedback.classList.add('hidden');
         renderAuthorizedModerators();
         if (newModEmailInput) {
           newModEmailInput.value = '';
           newModEmailInput.focus();
         }
+        if (newModPasswordInput) newModPasswordInput.value = '';
+        if (newModNameInput) newModNameInput.value = '';
       }
     };
   }
@@ -1308,22 +1509,83 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (addModEmailForm) {
     addModEmailForm.onsubmit = async (e) => {
       e.preventDefault();
-      const email = newModEmailInput.value.trim();
+      const email = newModEmailInput ? newModEmailInput.value.trim() : '';
+      const password = newModPasswordInput ? newModPasswordInput.value : '';
+      const displayName = newModNameInput ? newModNameInput.value.trim() : '';
+      const submitBtn = document.getElementById('submitAddModBtn');
+
       if (!email || !email.includes('@')) {
         alert('Mohon masukkan alamat email yang valid.');
         return;
       }
 
+      if (!password || password.length < 6) {
+        alert('Mohon tentukan kata sandi minimal 6 karakter untuk akun moderator ini.');
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Mendaftarkan Akun...</span>`;
+      }
+
       try {
-        if (window.AuthService && typeof window.AuthService.addModeratorEmail === 'function') {
+        if (window.AuthService && typeof window.AuthService.addModeratorAccount === 'function') {
+          await window.AuthService.addModeratorAccount({
+            email,
+            password,
+            displayName: displayName || email.split('@')[0],
+            addedBy: currentModerator ? (currentModerator.display_name || currentModerator.email) : 'Moderator Utama'
+          });
+        } else if (window.AuthService && typeof window.AuthService.addModeratorEmail === 'function') {
           await window.AuthService.addModeratorEmail(email, currentModerator ? (currentModerator.display_name || currentModerator.email) : 'Moderator Utama');
         }
-        addAuditLog('TAMBAH_MODERATOR', `Email: ${email}`, 'Diberikan otorisasi moderator resmi');
-        showToast(`Akun ${email} berhasil didaftarkan sebagai Moderator Resmi! 🛡️`);
-        newModEmailInput.value = '';
+
+        addAuditLog('TAMBAH_MODERATOR', `Email: ${email}`, `Diberikan akses resmi moderator dengan kata sandi`);
+        showToast(`Akun Moderator ${email} berhasil didaftarkan! 🛡️`);
+        
+        if (addModFeedback) {
+          addModFeedback.classList.remove('hidden');
+          addModFeedback.innerHTML = `
+            <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
+              <div class="flex items-center gap-1.5 font-bold text-emerald-800">
+                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+                <span>Akun Moderator Berhasil Didaftarkan!</span>
+              </div>
+              <div class="bg-white p-2.5 rounded-xl border border-emerald-100 font-mono text-[11px] space-y-0.5">
+                <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+                <p><strong>Password:</strong> ${escapeHtml(password)}</p>
+                ${displayName ? `<p><strong>Nama:</strong> ${escapeHtml(displayName)}</p>` : ''}
+              </div>
+              <button type="button" class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all copy-new-mod-btn">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>Salin Kredensial untuk Dikirimkan</span>
+              </button>
+            </div>
+          `;
+          const copyBtn = addModFeedback.querySelector('.copy-new-mod-btn');
+          if (copyBtn) {
+            copyBtn.onclick = () => {
+              const text = `Halo ${displayName || 'Moderator'},\nBerikut kredensial akun Moderator OASE Cerita Anda:\nEmail: ${email}\nKata Sandi: ${password}\nLaman Akses: https://.../laman-moderator.html\nMohon simpan dengan aman.`;
+              navigator.clipboard.writeText(text);
+              showToast('Kredensial berhasil disalin ke clipboard!');
+            };
+          }
+          if (window.lucide) lucide.createIcons();
+        }
+
+        if (newModEmailInput) newModEmailInput.value = '';
+        if (newModPasswordInput) newModPasswordInput.value = '';
+        if (newModNameInput) newModNameInput.value = '';
         renderAuthorizedModerators();
-      } catch(err) {
+      } catch (err) {
         alert(err.message || 'Gagal menambahkan akun moderator.');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<i data-lucide="user-plus" class="w-4 h-4"></i><span>Daftarkan Akun Moderator</span>`;
+          if (window.lucide) lucide.createIcons();
+        }
       }
     };
   }

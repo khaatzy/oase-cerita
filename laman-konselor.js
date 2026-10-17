@@ -600,9 +600,16 @@
     logoutBtn.addEventListener('click', () => {
       if (confirm('Apakah Anda yakin ingin keluar dari Portal Konselor?')) {
         window.CounselingService.logoutCounselor();
-        location.reload();
+        window.location.href = 'dashboard-awal.html';
       }
     });
+
+    const closeCounselorLoginModalBtn = document.getElementById('closeCounselorLoginModalBtn');
+    if (closeCounselorLoginModalBtn) {
+      closeCounselorLoginModalBtn.addEventListener('click', () => {
+        window.location.href = 'dashboard-awal.html';
+      });
+    }
 
     // 8. NOTIFIKASI & MODE TAB LIVE CHAT & RIWAYAT SELESAI
     const tabModeQueue = document.getElementById('tabModeQueue');
