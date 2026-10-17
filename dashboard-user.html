@@ -416,8 +416,13 @@
 
   <!-- Footer -->
   <footer class="mt-12 bg-white/70 border-t border-oase-border py-6 text-center text-xs text-oase-muted">
-    <div class="max-w-7xl mx-auto px-4">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
       <p>&copy; 2026 OASE Cerita. Obrolan Aman Seputar Emosi • Dashboard Siswa.</p>
+      <div class="flex items-center gap-3 text-[11px] font-semibold text-heather-700">
+        <a href="lapor-bug.html" target="_blank" class="hover:underline text-amber-700">Laporkan Bug / Kendala</a>
+        <span>•</span>
+        <a href="laman-moderator.html" class="hover:underline text-rose-700">Portal Moderator</a>
+      </div>
     </div>
   </footer>
 
@@ -731,15 +736,22 @@
             <textarea id="bugDescriptionInput" rows="3" required placeholder="Jelaskan kendala yang dialami, letak halaman, atau perangkat yang digunakan..." class="w-full p-3 rounded-xl border border-oase-border text-xs focus:outline-none focus:border-indigo-500 leading-relaxed"></textarea>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            <button type="button" id="sendBugWhatsAppBtn" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs">
-              <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
-              <span>Kirim via WhatsApp (+62 822-2817-6090)</span>
+          <div class="space-y-2 pt-1">
+            <button type="submit" id="submitBugDirectUserBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-heather-700 hover:from-amber-700 hover:to-heather-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              <span>Kirim Laporan ke Seluruh Moderator</span>
             </button>
-            <button type="button" id="sendBugEmailBtn" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs">
-              <i data-lucide="mail" class="w-3.5 h-3.5"></i>
-              <span>Kirim via Email (arkhanzaazs020911@gmail.com)</span>
-            </button>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button type="button" id="sendBugWhatsAppBtn" class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs">
+                <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                <span>WhatsApp IT (+62 822-2817-6090)</span>
+              </button>
+              <a href="lapor-bug.html" target="_blank" class="w-full py-2 rounded-xl border border-amber-300 hover:bg-amber-50 text-amber-900 font-bold text-xs transition-all flex items-center justify-center gap-1.5">
+                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                <span>Formulir Laporan Lengkap</span>
+              </a>
+            </div>
           </div>
         </form>
 

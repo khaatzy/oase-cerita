@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporkan Kendala & Bug - OASE Cerita</title>
+  
+  <!-- Favicon / Logo Tab Peramban -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="favicon.png">
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            heather: {
+              50: '#FBF6FA',
+              100: '#F5ECF3',
+              200: '#EBD9E7',
+              300: '#DCBED6',
+              400: '#C78CBB',
+              500: '#A14189',
+              600: '#84326F',
+              700: '#5F244F',
+              800: '#401835',
+              900: '#240B1D',
+            },
+            oase: {
+              surface: '#FFFBFD',
+              border: '#F2DFEE',
+              plum: '#2E1325',
+              muted: '#7A6273',
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-oase-surface text-oase-plum font-sans antialiased min-h-full flex flex-col justify-between selection:bg-heather-200 selection:text-heather-900">
+
+  <!-- Header / Navigation Bar -->
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-white/90 border-b border-oase-border shadow-xs">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
+      
+      <!-- Logo & Kembali -->
+      <div class="flex items-center gap-3 sm:gap-4">
+        <a href="dashboard-awal.html" class="flex items-center gap-2 group">
+          <img src="logo.png" alt="Logo OASE" class="w-10 h-10 object-contain group-hover:scale-105 transition-transform flex-shrink-0">
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-base sm:text-lg font-extrabold text-heather-700 leading-tight">OASE Cerita</span>
+              <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[9px] font-extrabold uppercase tracking-wider border border-amber-200">Pusat Bantuan IT</span>
+            </div>
+            <span class="hidden sm:block text-xs text-oase-muted font-medium">Layanan Pengaduan & Laporan Bug Siswa</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Tombol Kembali ke Beranda -->
+      <a href="dashboard-awal.html" class="px-3.5 py-2 rounded-xl border border-heather-200 hover:bg-heather-50 text-oase-plum font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-2xs">
+        <i data-lucide="arrow-left" class="w-4 h-4 text-heather-600"></i>
+        <span>Kembali</span>
+      </a>
+
+    </div>
+  </header>
+
+  <!-- Konten Utama: Form Laporan Bug -->
+  <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-grow w-full space-y-8">
+    
+    <!-- Hero Banner Card -->
+    <div class="bg-gradient-to-r from-amber-50 via-white to-heather-50 p-6 sm:p-8 rounded-3xl border border-amber-200 shadow-sm space-y-2 text-center sm:text-left">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-extrabold">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
+        <span>Bantu Kami Menyempurnakan OASE Cerita</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-oase-plum tracking-tight">
+        Formulir Laporan Bug & Kendala Teknis
+      </h1>
+      <p class="text-xs sm:text-sm text-oase-muted leading-relaxed max-w-2xl">
+        Menemukan tampilan yang berantakan, tombol yang macet, pesan yang tidak terkirim, atau kendala lainnya? Laporanmu akan langsung masuk ke seluruh tim moderator dan pengembang untuk segera dituntaskan.
+      </p>
+    </div>
+
+    <!-- Kotak Form Pengaduan -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-heather-200 shadow-sm space-y-6">
+      
+      <form id="bugReportMainForm" class="space-y-5 text-left">
+        
+        <!-- Baris 1: Identitas Pelapor -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-oase-plum uppercase tracking-wider mb-1.5">
+              Nama Pelapor / Nama Samaran
+            </label>
+            <input 
+              type="text" 
+              id="reporterNameInput" 
+              placeholder="Contoh: Siswa Anonim / Nama Kamu" 
+              class="w-full px-4 py-2.5 rounded-xl border border-oase-border text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-oase-surface/50"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-oase-plum uppercase tracking-wider mb-1.5">
+              Email / Nomor Kontak (Opsional)
+            </label>
+            <input 
+              type="text" 
+              id="reporterEmailInput" 
+              placeholder="email@sekolah.sch.id / No. WhatsApp" 
+              class="w-full px-4 py-2.5 rounded-xl border border-oase-border text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-oase-surface/50"
+            />
+          </div>
+        </div>
+
+        <!-- Baris 2: Kategori & Perangkat -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-oase-plum uppercase tracking-wider mb-1.5">
+              Kategori Kendala <span class="text-rose-600">*</span>
+            </label>
+            <select id="bugCategoryInput" required class="w-full px-4 py-2.5 rounded-xl border border-oase-border text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white">
+              <option value="Tampilan / UI Berantakan">🎨 Tampilan / UI Berantakan</option>
+              <option value="Pesan & Chat Konseling">💬 Pesan & Chat Konseling</option>
+              <option value="Fitur Kirim Cerita">📝 Fitur Kirim Cerita</option>
+              <option value="Audio Relaksasi Mood">🎧 Audio Relaksasi Mood</option>
+              <option value="Login, Akun & Hak Akses">🔐 Login, Akun & Hak Akses</option>
+              <option value="Tombol Macet / Tidak Merespons">⚙️ Tombol Macet / Tidak Merespons</option>
+              <option value="Lainnya">📌 Lainnya</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-oase-plum uppercase tracking-wider mb-1.5">
+              Perangkat & Peramban <span class="text-rose-600">*</span>
+            </label>
+            <select id="bugDeviceInput" required class="w-full px-4 py-2.5 rounded-xl border border-oase-border text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white">
+              <option value="HP Android (Google Chrome)">📱 HP Android (Google Chrome)</option>
+              <option value="iPhone / iPad (Safari / Chrome)">🍎 iPhone / iPad (Safari / Chrome)</option>
+              <option value="Laptop / PC Windows (Chrome / Edge)">💻 Laptop / PC Windows (Chrome / Edge)</option>
+              <option value="MacBook / iMac (Safari / Chrome)">🖥️ MacBook / iMac (Safari / Chrome)</option>
+              <option value="Perangkat Lainnya">🌐 Perangkat Lainnya</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Baris 3: Halaman Tempat Kendala Ditemukan -->
+        <div>
+          <label class="block text-xs font-bold text-oase-plum uppercase tracking-wider mb-1.5">
+            Halaman Tempat Kendala Ditemukan
+          </label>
+          <select id="bugPageUrlInput" class="w-full px-4 py-2.5 rounded-xl border border-oase-border text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white">
+            <option value="Beranda Utama (dashboard-awal.html)">Beranda Utama (dashboard-awal.html)</option>
+            <option value="Dashboard Siswa (dashboard-user.html)">Dashboard Siswa (dashboard-user.html)</option>
+            <option value="Kirim Cerita & Curhat (kirim-cerita.html)">Kirim Cerita & Curhat (kirim-cerita.html)</option>
+            <option value="Ruang Chat Konseling (ruang-chat.html)">Ruang Chat Konseling (ruang-chat.html)</option>
+            <option value="Komunitas Empatis (komunitas.html)">Komunitas Empatis (komunitas.html)</option>
+            <option value="Relaksasi Mood (relaksasi-mood.html)">Relaksasi Mood (relaksasi-mood.html)</option>
+            <option value="Laman Moderator (laman-moderator.html)">Laman Moderator (laman-moderator.html)</option>
+            <option value="Laman Konselor (laman-konselor.html)">Laman Konselor (laman-konselor.html)</option>
+          </select>
+        </div>
+
+        <!-- Baris 4: Deskripsi Detail Bug -->
+        <div>
+          <label class="block text-xs font-bold text-oase-plum uppercase tracking-wider mb-1.5">
+            Jelaskan Kendala yang Dialami Secara Rinci <span class="text-rose-600">*</span>
+          </label>
+          <textarea 
+            id="bugDescriptionArea" 
+            rows="5" 
+            required 
+            placeholder="Contoh: Saat saya membuka halaman komunitas di HP layar kecil, tombol kirim komentar terpotong dan tulisan saling bertumpuk..." 
+            class="w-full p-4 rounded-2xl border border-oase-border text-xs sm:text-sm focus:outline-none focus:border-amber-500 leading-relaxed bg-oase-surface/50 resize-y"
+          ></textarea>
+        </div>
+
+        <!-- Alert Error/Success -->
+        <div id="bugFormAlert" class="hidden p-3.5 rounded-xl text-xs font-semibold"></div>
+
+        <!-- Action Buttons: Kirim Langsung ke Moderator & Opsi WhatsApp -->
+        <div class="pt-2 space-y-3">
+          
+          <!-- Tombol Utama: Kirim Langsung ke Seluruh Moderator -->
+          <button 
+            type="submit" 
+            id="submitBugDirectBtn" 
+            class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 to-heather-700 hover:from-amber-700 hover:to-heather-800 text-white font-extrabold text-sm shadow-md shadow-amber-600/20 transition-all flex items-center justify-center gap-2 transform active:scale-98"
+          >
+            <i data-lucide="send" class="w-4 h-4"></i>
+            <span>Kirim Laporan ke Tim Teknis & Moderator</span>
+          </button>
+
+          <!-- Opsi Tambahan: Kirim via WhatsApp Langsung -->
+          <button 
+            type="button" 
+            id="sendViaWhatsAppBtn" 
+            class="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-2"
+          >
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            <span>Laporkan via WhatsApp IT (+62 822-2817-6090)</span>
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+    <!-- Info Bantuan Tambahan -->
+    <div class="bg-indigo-50/60 p-4 sm:p-5 rounded-2xl border border-indigo-200 text-xs text-indigo-950 flex items-start gap-3">
+      <i data-lucide="shield-check" class="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5"></i>
+      <div class="space-y-1">
+        <span class="font-bold text-indigo-900 block">Privasi & Kerahasiaan Terjamin</span>
+        <p class="leading-relaxed text-[11px] text-indigo-900/90">
+          Laporan yang kamu kirimkan hanya dapat dibaca oleh tim moderator dan pengembang sistem OASE Cerita. Kamu berhak melaporkan tanpa mencantumkan identitas asli (100% aman dan anonim).
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Sukses Pengiriman Laporan -->
+  <div id="bugSuccessModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-oase-plum/70 backdrop-blur-md hidden animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-heather-200 shadow-2xl text-center space-y-5">
+      <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
+        <i data-lucide="check-circle" class="w-8 h-8"></i>
+      </div>
+      <div class="space-y-1.5">
+        <h3 class="text-xl font-extrabold text-oase-plum">Laporan Berhasil Terkirim!</h3>
+        <p class="text-xs text-oase-muted leading-relaxed">
+          Terima kasih atas bantuanmu. Laporan telah masuk ke antrean seluruh moderator OASE dan akan segera diinvestigasi.
+        </p>
+      </div>
+
+      <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-1">
+        <span class="text-[10px] uppercase font-bold text-amber-800 tracking-wider block">ID Tiket Laporan Anda:</span>
+        <span id="ticketResultId" class="text-xl font-mono font-black text-amber-950 block">BUG-0000</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5 pt-2">
+        <button id="closeSuccessModalBtn" type="button" class="py-2.5 rounded-xl border border-oase-border hover:bg-slate-50 text-xs font-bold text-oase-muted transition-all">
+          Tutup
+        </button>
+        <a href="dashboard-awal.html" class="py-2.5 rounded-xl bg-heather-600 hover:bg-heather-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all">
+          <i data-lucide="home" class="w-3.5 h-3.5"></i>
+          <span>Ke Beranda</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-oase-border py-6 text-center text-xs text-oase-muted mt-12">
+    <div class="max-w-5xl mx-auto px-4 space-y-1">
+      <p class="font-semibold text-heather-800">OASE Cerita &copy; 2026 • Obrolan Aman Seputar Emosi</p>
+      <p class="text-[11px] text-oase-muted">Pusat Layanan Dukungan Teknis & Penanganan Kendala Sistem</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+  <script src="lapor-bug.js"></script>
+</body>
+</html>

@@ -188,6 +188,29 @@ const CrisisDetectionService = {
       }
     }
 
+    // 5. Cek Kosakata Kustom yang Ditambahkan Moderator Secara Dinamis (Real-time Sync)
+    const customKeywords = (window.SaraKeywordService && typeof window.SaraKeywordService.getCustomKeywordsSync === 'function')
+      ? window.SaraKeywordService.getCustomKeywordsSync()
+      : (() => {
+          try { return JSON.parse(localStorage.getItem('oase_custom_sara_keywords') || '[]'); } catch(e) { return []; }
+        })();
+
+    for (const item of customKeywords) {
+      const kw = (item.keyword || '').toLowerCase().trim();
+      if (!kw) continue;
+      if (raw.includes(kw) || normalized.includes(kw)) {
+        const cat = item.category || 'sara';
+        return {
+          isCrisis: cat === 'krisis',
+          isSara: cat === 'sara',
+          isViolation: true,
+          category: cat,
+          matchedKeyword: item.keyword,
+          label: item.note || (cat === 'sara' ? 'Ujaran Kebencian / SARA (Kamus Moderator)' : 'Pelanggaran Aturan OASE')
+        };
+      }
+    }
+
     return {
       isCrisis: false,
       isSara: false,
@@ -444,13 +467,14 @@ const AuthService = {
     'arkhanzaazs020911@gmail.com'
   ],
 
-  // Cek apakah akun memiliki hak akses Moderator
+  // Cek apakah akun memiliki hak akses Moderator resmi secara ketat (Tanpa bypass substring)
   isModeratorEmail(email, profile = null) {
     if (!email) return false;
     const lower = email.toLowerCase().trim();
+    // 1. Cek role resmi di profil database Supabase
     if (profile && profile.role === 'moderator') return true;
-    if (lower.includes('moderator') || lower.includes('admin')) return true;
-    return this.MODERATORS_LIST.some(e => e.toLowerCase() === lower);
+    // 2. Cek apakah email terdaftar persis dalam whitelist resmi OASE
+    return this.MODERATORS_LIST.some(e => e.toLowerCase().trim() === lower);
   }
 };
 
@@ -1113,12 +1137,399 @@ Gunakan bahasa Indonesia yang akrab, sopan, santun, dan menyentuh hati. Jangan m
   }
 };
 
-// Layanan Push Notifikasi Desktop & HP (Web Notification API + Service Worker)
+// ==============================================================================
+// 7. LAYANAN LAPORAN BUG & KENDALA SISTEM (BUG REPORT SERVICE - MULTI-MODERATOR)
+// ==============================================================================
+const BugReportService = {
+  DEFAULT_REPORTS: [
+    {
+      id: 'bug-init-1',
+      ticket_id: 'BUG-4819',
+      category: 'Tampilan / UI',
+      reporter: 'Siswa Kelas 11',
+      reporter_email: 'siswa11@oase.id',
+      device: 'HP Android (Chrome)',
+      page_url: 'komunitas.html',
+      description: 'Tombol bagikan cerita terkadang tertutup oleh bilah navigasi bawah di layar ponsel kecil.',
+      status: 'baru',
+      created_at: new Date(Date.now() - 3600000 * 4).toISOString(),
+      resolved_by: null,
+      resolved_at: null
+    },
+    {
+      id: 'bug-init-2',
+      ticket_id: 'BUG-7290',
+      category: 'Audio Relaksasi',
+      reporter: 'Siswa Kelas 10',
+      reporter_email: 'siswa10@oase.id',
+      device: 'Laptop Windows (Edge)',
+      page_url: 'relaksasi-mood.html',
+      description: 'Suara ombak relaksasi sempat berhenti sendiri saat layar laptop terkunci (sleep).',
+      status: 'proses',
+      created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+      resolved_by: null,
+      resolved_at: null
+    }
+  ],
+
+  _channel: null,
+  _listeners: [],
+  _initialized: false,
+
+  initRealtime() {
+    if (this._initialized) return;
+    this._initialized = true;
+
+    if ('BroadcastChannel' in window) {
+      try {
+        this._bc = new BroadcastChannel('oase_bug_reports_channel');
+        this._bc.onmessage = (e) => {
+          this._handleIncomingUpdate(e.data);
+        };
+      } catch(e) {}
+    }
+
+    if (supabaseClient && typeof supabaseClient.channel === 'function') {
+      try {
+        this._channel = supabaseClient.channel('oase_bug_sync', {
+          config: { broadcast: { self: false } }
+        });
+        this._channel.on('broadcast', { event: 'bug_update' }, ({ payload }) => {
+          this._handleIncomingUpdate(payload);
+        }).subscribe();
+      } catch(e) {}
+    }
+  },
+
+  onUpdate(callback) {
+    if (typeof callback === 'function') {
+      this._listeners.push(callback);
+    }
+  },
+
+  _notifyListeners(data) {
+    this._listeners.forEach(cb => {
+      try { cb(data); } catch(e) {}
+    });
+  },
+
+  _handleIncomingUpdate(data) {
+    if (!data) return;
+    if (data.action === 'NEW_REPORT' && data.payload) {
+      const reports = this.getReportsSync();
+      if (!reports.some(r => r.id === data.payload.id)) {
+        reports.unshift(data.payload);
+        localStorage.setItem('oase_bug_reports', JSON.stringify(reports));
+      }
+    } else if (data.action === 'STATUS_CHANGED' && data.payload) {
+      const reports = this.getReportsSync();
+      const target = reports.find(r => r.id === data.payload.bugId);
+      if (target) {
+        target.status = data.payload.newStatus;
+        target.resolved_by = data.payload.resolvedBy;
+        target.resolved_at = data.payload.resolvedAt;
+        localStorage.setItem('oase_bug_reports', JSON.stringify(reports));
+      }
+    } else if (data.action === 'DELETED' && data.payload) {
+      let reports = this.getReportsSync();
+      reports = reports.filter(r => r.id !== data.payload.bugId);
+      localStorage.setItem('oase_bug_reports', JSON.stringify(reports));
+    }
+    this._notifyListeners(data);
+  },
+
+  _broadcast(action, payload) {
+    const data = { action, payload, timestamp: Date.now() };
+    if (this._bc) {
+      try { this._bc.postMessage(data); } catch(e) {}
+    }
+    if (this._channel) {
+      try {
+        this._channel.send({
+          type: 'broadcast',
+          event: 'bug_update',
+          payload: data
+        });
+      } catch(e) {}
+    }
+  },
+
+  getReportsSync() {
+    const local = localStorage.getItem('oase_bug_reports');
+    if (local) {
+      try { return JSON.parse(local); } catch(e) { return []; }
+    }
+    return [...this.DEFAULT_REPORTS];
+  },
+
+  async getReports({ includeResolved = true } = {}) {
+    let reports = [];
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('bug_reports')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          reports = data;
+          localStorage.setItem('oase_bug_reports', JSON.stringify(reports));
+          return includeResolved ? reports : reports.filter(r => r.status !== 'selesai');
+        }
+      } catch(e) {}
+    }
+
+    const local = localStorage.getItem('oase_bug_reports');
+    if (local) {
+      try { reports = JSON.parse(local); } catch(e) { reports = []; }
+    } else {
+      reports = [...this.DEFAULT_REPORTS];
+      localStorage.setItem('oase_bug_reports', JSON.stringify(reports));
+    }
+
+    if (!includeResolved) {
+      return reports.filter(r => r.status !== 'selesai');
+    }
+    return reports;
+  },
+
+  async submitReport({ reporterName, reporterEmail, category, device, pageUrl, description }) {
+    if (!description || !description.trim()) {
+      throw new Error('Deskripsi kendala wajib diisi.');
+    }
+    const ticketId = 'BUG-' + Math.floor(1000 + Math.random() * 9000);
+    const newReport = {
+      id: 'bug-' + Date.now(),
+      ticket_id: ticketId,
+      reporter: reporterName && reporterName.trim() ? reporterName.trim() : 'Siswa OASE (Anonim)',
+      reporter_email: reporterEmail && reporterEmail.trim() ? reporterEmail.trim() : 'Anonim',
+      category: category || 'Kendala Teknis',
+      device: device || 'Peramban Web',
+      page_url: pageUrl || window.location.pathname || 'Web OASE',
+      description: description.trim(),
+      status: 'baru',
+      created_at: new Date().toISOString(),
+      resolved_by: null,
+      resolved_at: null
+    };
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('bug_reports').insert([newReport]);
+      } catch(e) {}
+    }
+
+    const reports = await this.getReports({ includeResolved: true });
+    reports.unshift(newReport);
+    localStorage.setItem('oase_bug_reports', JSON.stringify(reports));
+
+    this._broadcast('NEW_REPORT', newReport);
+    return { success: true, report: newReport };
+  },
+
+  async updateStatus(bugId, newStatus, moderatorName = 'Moderator OASE') {
+    const reports = await this.getReports({ includeResolved: true });
+    const target = reports.find(r => r.id === bugId);
+    if (!target) return { success: false };
+
+    target.status = newStatus;
+    if (newStatus === 'selesai') {
+      target.resolved_by = moderatorName;
+      target.resolved_at = new Date().toISOString();
+    } else {
+      target.resolved_by = null;
+      target.resolved_at = null;
+    }
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('bug_reports').update({
+          status: newStatus,
+          resolved_by: target.resolved_by,
+          resolved_at: target.resolved_at
+        }).eq('id', bugId);
+      } catch(e) {}
+    }
+
+    localStorage.setItem('oase_bug_reports', JSON.stringify(reports));
+    this._broadcast('STATUS_CHANGED', {
+      bugId,
+      newStatus,
+      resolvedBy: target.resolved_by,
+      resolvedAt: target.resolved_at,
+      report: target
+    });
+
+    return { success: true, report: target };
+  },
+
+  async deleteReport(bugId) {
+    let reports = await this.getReports({ includeResolved: true });
+    reports = reports.filter(r => r.id !== bugId);
+    localStorage.setItem('oase_bug_reports', JSON.stringify(reports));
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('bug_reports').delete().eq('id', bugId);
+      } catch(e) {}
+    }
+
+    this._broadcast('DELETED', { bugId });
+    return { success: true };
+  }
+};
+
+// ==============================================================================
+// 8. LAYANAN KAMUS SENSOR SARA DINAMIS (SARA KEYWORDS - MULTI-MODERATOR SYNC)
+// ==============================================================================
+const SaraKeywordService = {
+  _channel: null,
+  _listeners: [],
+  _initialized: false,
+
+  initRealtime() {
+    if (this._initialized) return;
+    this._initialized = true;
+
+    if ('BroadcastChannel' in window) {
+      try {
+        this._bc = new BroadcastChannel('oase_sara_sync_channel');
+        this._bc.onmessage = (e) => {
+          this._handleIncomingUpdate(e.data);
+        };
+      } catch(e) {}
+    }
+
+    if (supabaseClient && typeof supabaseClient.channel === 'function') {
+      try {
+        this._channel = supabaseClient.channel('oase_sara_room', {
+          config: { broadcast: { self: false } }
+        });
+        this._channel.on('broadcast', { event: 'sara_keyword_update' }, ({ payload }) => {
+          this._handleIncomingUpdate(payload);
+        }).subscribe();
+      } catch(e) {}
+    }
+  },
+
+  onUpdate(callback) {
+    if (typeof callback === 'function') {
+      this._listeners.push(callback);
+    }
+  },
+
+  _notifyListeners(data) {
+    this._listeners.forEach(cb => {
+      try { cb(data); } catch(e) {}
+    });
+  },
+
+  _handleIncomingUpdate(data) {
+    if (!data) return;
+    if (data.action === 'ADD' && data.payload) {
+      const list = this.getCustomKeywordsSync();
+      if (!list.some(k => k.keyword.toLowerCase() === data.payload.keyword.toLowerCase())) {
+        list.push(data.payload);
+        localStorage.setItem('oase_custom_sara_keywords', JSON.stringify(list));
+      }
+    } else if (data.action === 'DELETE' && data.payload) {
+      let list = this.getCustomKeywordsSync();
+      list = list.filter(k => k.id !== data.payload.keywordId);
+      localStorage.setItem('oase_custom_sara_keywords', JSON.stringify(list));
+    }
+    this._notifyListeners(data);
+  },
+
+  _broadcast(action, payload) {
+    const data = { action, payload, timestamp: Date.now() };
+    if (this._bc) {
+      try { this._bc.postMessage(data); } catch(e) {}
+    }
+    if (this._channel) {
+      try {
+        this._channel.send({
+          type: 'broadcast',
+          event: 'sara_keyword_update',
+          payload: data
+        });
+      } catch(e) {}
+    }
+  },
+
+  getCustomKeywordsSync() {
+    try {
+      return JSON.parse(localStorage.getItem('oase_custom_sara_keywords') || '[]');
+    } catch(e) {
+      return [];
+    }
+  },
+
+  async getCustomKeywords() {
+    let list = [];
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('sara_keywords')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          list = data;
+          localStorage.setItem('oase_custom_sara_keywords', JSON.stringify(list));
+          return list;
+        }
+      } catch(e) {}
+    }
+    return this.getCustomKeywordsSync();
+  },
+
+  async addKeyword({ keyword, category = 'sara', note = '', addedBy = 'Moderator' }) {
+    if (!keyword || !keyword.trim()) throw new Error('Kata kunci tidak boleh kosong');
+    const cleanWord = keyword.trim().toLowerCase();
+    const item = {
+      id: 'kw-' + Date.now(),
+      keyword: cleanWord,
+      category: category,
+      note: note.trim() || 'Ditambahkan oleh moderator',
+      added_by: addedBy,
+      created_at: new Date().toISOString()
+    };
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('sara_keywords').insert([item]);
+      } catch(e) {}
+    }
+
+    const list = this.getCustomKeywordsSync();
+    if (!list.some(k => k.keyword.toLowerCase() === cleanWord)) {
+      list.push(item);
+      localStorage.setItem('oase_custom_sara_keywords', JSON.stringify(list));
+    }
+
+    this._broadcast('ADD', item);
+    return item;
+  },
+
+  async deleteKeyword(keywordId) {
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('sara_keywords').delete().eq('id', keywordId);
+      } catch(e) {}
+    }
+    let list = this.getCustomKeywordsSync();
+    list = list.filter(k => k.id !== keywordId);
+    localStorage.setItem('oase_custom_sara_keywords', JSON.stringify(list));
+    this._broadcast('DELETE', { keywordId });
+    return true;
+  }
+};
 
 // Ekspor ke window global agar mudah diakses di seluruh aplikasi
 window.AuthService = AuthService;
 window.StoryService = StoryService;
 window.CounselingService = CounselingService;
 window.GeminiService = GeminiService;
+window.BugReportService = BugReportService;
+window.SaraKeywordService = SaraKeywordService;
+
 
 

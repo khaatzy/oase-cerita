@@ -911,22 +911,54 @@
       });
     }
 
-    if (sendBugWhatsAppBtn && bugDescriptionInput) {
-      sendBugWhatsAppBtn.addEventListener('click', () => {
-        const desc = bugDescriptionInput.value.trim();
+    const bugReportForm = document.getElementById('bugReportForm');
+    if (bugReportForm) {
+      bugReportForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const desc = bugDescriptionInput ? bugDescriptionInput.value.trim() : '';
         if (!desc) {
-          alert('Mohon tuliskan deskripsi kendala yang Anda temukan terlebih dahulu.');
-          bugDescriptionInput.focus();
+          alert('Mohon tuliskan deskripsi kendala yang Anda temukan.');
+          if (bugDescriptionInput) bugDescriptionInput.focus();
           return;
         }
+
         const cat = bugCategorySelect ? bugCategorySelect.value : 'Kendala Sistem';
-        const msg = encodeURIComponent(`*LAPORAN KENDALA OASE CERITA*\n\n*Kategori:* ${cat}\n*Halaman:* ${window.location.pathname}\n*User:* ${userProfile.display_name || userProfile.full_name || 'Pengguna'}\n*Deskripsi Kendala:*\n${desc}\n\n_Mohon bantuannya untuk diperbaiki tim IT. Terima kasih._`);
-        window.open(`https://wa.me/6282228176090?text=${msg}`, '_blank');
+        const submitBtn = document.getElementById('submitBugDirectUserBtn');
+        const origText = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Mengirim Laporan ke Seluruh Moderator...';
+        }
+
+        try {
+          if (window.BugReportService) {
+            await window.BugReportService.submitReport({
+              reporterName: userProfile.display_name || userProfile.full_name || 'Siswa OASE',
+              reporterEmail: (currentUser && currentUser.email) ? currentUser.email : 'Anonim',
+              category: cat,
+              device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iOS Mobile' : (/Android/i.test(navigator.userAgent) ? 'Android Mobile' : 'Desktop / PC'),
+              pageUrl: window.location.pathname || 'dashboard-user.html',
+              description: desc
+            });
+            alert('Laporan kendala berhasil dikirim dan telah masuk ke antrean seluruh moderator OASE. Terima kasih!');
+            bugReportForm.reset();
+            const emergencyHelpModal = document.getElementById('emergencyHelpModal');
+            if (emergencyHelpModal) emergencyHelpModal.classList.add('hidden');
+          }
+        } catch(err) {
+          console.error('Error submitting bug from dashboard:', err);
+          alert('Terjadi kesalahan saat mengirim laporan. Silakan coba lagi atau gunakan WhatsApp.');
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origText;
+          }
+        }
       });
     }
 
-    if (sendBugEmailBtn && bugDescriptionInput) {
-      sendBugEmailBtn.addEventListener('click', () => {
+    if (sendBugWhatsAppBtn && bugDescriptionInput) {
+      sendBugWhatsAppBtn.addEventListener('click', async () => {
         const desc = bugDescriptionInput.value.trim();
         if (!desc) {
           alert('Mohon tuliskan deskripsi kendala yang Anda temukan terlebih dahulu.');
@@ -934,9 +966,22 @@
           return;
         }
         const cat = bugCategorySelect ? bugCategorySelect.value : 'Kendala Sistem';
-        const subject = encodeURIComponent(`[Laporan Bug OASE] ${cat}`);
-        const body = encodeURIComponent(`Halo Tim Pengembang OASE Cerita,\n\nSaya menemukan kendala teknis berikut:\n\nKategori: ${cat}\nHalaman: ${window.location.pathname}\nUser: ${userProfile.display_name || userProfile.full_name || 'Pengguna'}\n\nDeskripsi Masalah:\n${desc}\n\nTerima kasih.`);
-        window.location.href = `mailto:arkhanzaazs020911@gmail.com?subject=${subject}&body=${body}`;
+
+        if (window.BugReportService) {
+          try {
+            await window.BugReportService.submitReport({
+              reporterName: userProfile.display_name || userProfile.full_name || 'Siswa OASE',
+              reporterEmail: (currentUser && currentUser.email) ? currentUser.email : 'WhatsApp',
+              category: cat,
+              device: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iOS Mobile' : (/Android/i.test(navigator.userAgent) ? 'Android Mobile' : 'Desktop / PC'),
+              pageUrl: window.location.pathname || 'dashboard-user.html',
+              description: `[Via WhatsApp] ${desc}`
+            });
+          } catch(e) {}
+        }
+
+        const msg = encodeURIComponent(`*LAPORAN KENDALA OASE CERITA*\n\n*Kategori:* ${cat}\n*Halaman:* ${window.location.pathname}\n*User:* ${userProfile.display_name || userProfile.full_name || 'Pengguna'}\n*Deskripsi Kendala:*\n${desc}\n\n_Mohon bantuannya untuk diperbaiki tim IT. Terima kasih._`);
+        window.open(`https://wa.me/6282228176090?text=${msg}`, '_blank');
       });
     }
 

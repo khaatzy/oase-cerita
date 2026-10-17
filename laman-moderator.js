@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. STATE & VARIABEL GLOBAL
   // ============================================================================
   let currentModerator = null;
-  let activeTab = 'hateSpeech'; // 'hateSpeech', 'allComments', 'bugReports', 'auditLogs', 'keywords'
-  let activeBugFilter = 'all';
+  let activeTab = 'hateSpeech'; // 'hateSpeech', 'allComments', 'bugReports', 'keywords', 'auditLogs'
+  let activeBugFilter = 'active'; // 'active', 'selesai', 'all'
   let commentToDelete = null; // { storyId, commentId, author, text, source }
   let isAlarmSoundEnabled = localStorage.getItem('oase_mod_sound_enabled') !== 'false';
   let currentAuthRole = 'moderator'; // 'user' or 'moderator'
@@ -50,20 +50,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statSafetyIndex = document.getElementById('statSafetyIndex');
   const badgeHateSpeechCount = document.getElementById('badgeHateSpeechCount');
   const badgeBugReportsCount = document.getElementById('badgeBugReportsCount');
+  const bugCountActive = document.getElementById('bugCountActive');
+  const bugCountResolved = document.getElementById('bugCountResolved');
+  const bugCountAll = document.getElementById('bugCountAll');
 
   // Tab Buttons
   const tabBtnHateSpeech = document.getElementById('tabBtnHateSpeech');
   const tabBtnAllComments = document.getElementById('tabBtnAllComments');
   const tabBtnBugReports = document.getElementById('tabBtnBugReports');
-  const tabBtnAuditLogs = document.getElementById('tabBtnAuditLogs');
   const tabBtnKeywords = document.getElementById('tabBtnKeywords');
+  const tabBtnAuditLogs = document.getElementById('tabBtnAuditLogs');
 
   // Sections
   const sectionHateSpeech = document.getElementById('sectionHateSpeech');
   const sectionAllComments = document.getElementById('sectionAllComments');
   const sectionBugReports = document.getElementById('sectionBugReports');
-  const sectionAuditLogs = document.getElementById('sectionAuditLogs');
   const sectionKeywords = document.getElementById('sectionKeywords');
+  const sectionAuditLogs = document.getElementById('sectionAuditLogs');
 
   // Section Containers
   const hateSpeechListContainer = document.getElementById('hateSpeechListContainer');
@@ -71,6 +74,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   const bugReportsListContainer = document.getElementById('bugReportsListContainer');
   const auditLogsContainer = document.getElementById('auditLogsContainer');
   const commentSearchInput = document.getElementById('commentSearchInput');
+
+  // SARA Keywords & Modal
+  const customKeywordsContainer = document.getElementById('customKeywordsContainer');
+  const customKeywordsCountBadge = document.getElementById('customKeywordsCountBadge');
+  const openAddKeywordModalBtn = document.getElementById('openAddKeywordModalBtn');
+  const closeAddKeywordModalBtn = document.getElementById('closeAddKeywordModalBtn');
+  const cancelAddKeywordBtn = document.getElementById('cancelAddKeywordBtn');
+  const addSaraKeywordModal = document.getElementById('addSaraKeywordModal');
+  const addSaraKeywordForm = document.getElementById('addSaraKeywordForm');
+  const newSaraKeywordInput = document.getElementById('newSaraKeywordInput');
+  const newSaraCategorySelect = document.getElementById('newSaraCategorySelect');
+  const newSaraNoteInput = document.getElementById('newSaraNoteInput');
 
   // Modals & Forms
   const deleteModal = document.getElementById('deleteModal');
@@ -192,15 +207,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         profile = await window.AuthService.getUserProfile(session.user.id, email);
       } catch (e) {
-        profile = { email, display_name: email.split('@')[0], role: 'moderator' };
+        profile = { email, display_name: email.split('@')[0], role: 'user' };
       }
 
-      // Cek apakah akun memiliki wewenang moderator
+      // Cek apakah akun memiliki wewenang moderator resmi
       const isAuthorizedMod = (window.AuthService && typeof window.AuthService.isModeratorEmail === 'function')
         ? window.AuthService.isModeratorEmail(email, profile)
-        : (profile.role === 'moderator' || savedModEmail === email || email.toLowerCase().includes('moderator') || email.toLowerCase().includes('admin'));
+        : (profile && profile.role === 'moderator');
 
-      if (isAuthorizedMod || savedModEmail === email) {
+      if (isAuthorizedMod) {
         currentModerator = {
           id: session.user.id,
           email: email,
@@ -210,16 +225,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('oase_active_moderator_email', email);
         initDashboard();
         return;
+      } else {
+        localStorage.removeItem('oase_active_moderator_email');
       }
     } else if (savedModEmail) {
-      currentModerator = {
-        id: 'local-mod-' + savedModEmail,
-        email: savedModEmail,
-        display_name: savedModEmail.split('@')[0],
-        role: 'moderator'
-      };
-      initDashboard();
-      return;
+      // Verifikasi email tersimpan dengan whitelist resmi
+      const isAuthorizedMod = (window.AuthService && typeof window.AuthService.isModeratorEmail === 'function')
+        ? window.AuthService.isModeratorEmail(savedModEmail, null)
+        : false;
+
+      if (isAuthorizedMod) {
+        currentModerator = {
+          id: 'local-mod-' + savedModEmail,
+          email: savedModEmail,
+          display_name: 'Moderator OASE',
+          role: 'moderator'
+        };
+        initDashboard();
+        return;
+      } else {
+        localStorage.removeItem('oase_active_moderator_email');
+      }
     }
 
     // Jika belum terotentikasi sebagai moderator, buka pop-up modal
@@ -349,15 +375,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           const isMod = (window.AuthService && typeof window.AuthService.isModeratorEmail === 'function')
             ? window.AuthService.isModeratorEmail(email, profile)
-            : ((profile && profile.role === 'moderator') || 
-               email.toLowerCase().includes('moderator') || 
-               email.toLowerCase().includes('admin'));
+            : (profile && profile.role === 'moderator');
 
           if (!isMod) {
             if (window.AuthService && typeof window.AuthService.signOut === 'function') {
               await window.AuthService.signOut();
             }
-            showAuthAlert('Akses Ditolak: Akun ini terdaftar sebagai Pengguna Biasa dan tidak memiliki wewenang Moderator. Silakan beralih ke tab User Biasa.', 'error');
+            showAuthAlert('Akses Ditolak: Akun ini tidak terdaftar dalam daftar resmi pengawas/moderator OASE. Silakan beralih ke tab User Biasa.', 'error');
             return;
           }
 
@@ -435,11 +459,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (hour >= 15 && hour < 18) timeGreeting = 'Selamat Sore';
     else if (hour >= 18 || hour < 4) timeGreeting = 'Selamat Malam';
 
-    const displayName = currentModerator.display_name || currentModerator.email.split('@')[0];
+    let cleanName = currentModerator.display_name || '';
+    if (!cleanName || cleanName.includes('@')) {
+      cleanName = 'Moderator';
+    }
 
-    greetingHeading.innerHTML = `${timeGreeting}, <span class="text-rose-600">${escapeHtml(displayName)}</span>.`;
-    navModName.textContent = displayName;
-    navModRole.textContent = `Moderator (${currentModerator.email})`;
+    greetingHeading.innerHTML = `Selamat Datang, <span class="text-rose-600">${escapeHtml(cleanName)}</span>.`;
+    navModName.textContent = cleanName;
+    navModRole.textContent = 'Otoritas Pengawas OASE';
 
     // Status Selector Handler
     if (moderatorStatusSelect && moderatorStatusDot) {
@@ -831,27 +858,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ============================================================================
-  // 8. FITUR 4: KOTAK LAPORAN BUG & ADUAN SISWA
+  // 8. FITUR 4: KOTAK LAPORAN BUG & ADUAN SISWA (MULTI-MODERATOR REAL-TIME)
   // ============================================================================
-  function renderBugReports() {
-    const reports = getBugReports();
-    badgeBugReportsCount.textContent = reports.filter(r => r.status !== 'selesai').length;
-    statBugReportsCount.textContent = reports.length;
+  async function renderBugReports() {
+    let reports = [];
+    if (window.BugReportService) {
+      reports = await window.BugReportService.getReports({ includeResolved: true });
+    } else {
+      reports = getBugReports();
+    }
 
-    const filtered = activeBugFilter === 'all'
-      ? reports
-      : reports.filter(r => r.status === activeBugFilter);
+    const uncompletedReports = reports.filter(r => r.status !== 'selesai');
+    const resolvedReports = reports.filter(r => r.status === 'selesai');
+
+    if (badgeBugReportsCount) badgeBugReportsCount.textContent = uncompletedReports.length;
+    if (statBugReportsCount) statBugReportsCount.textContent = uncompletedReports.length;
+    if (bugCountActive) bugCountActive.textContent = uncompletedReports.length;
+    if (bugCountResolved) bugCountResolved.textContent = resolvedReports.length;
+    if (bugCountAll) bugCountAll.textContent = reports.length;
+
+    let filtered = [];
+    if (activeBugFilter === 'active') {
+      filtered = uncompletedReports;
+    } else if (activeBugFilter === 'selesai') {
+      filtered = resolvedReports;
+    } else {
+      filtered = reports;
+    }
 
     if (filtered.length === 0) {
       bugReportsListContainer.innerHTML = `
         <div class="bg-white rounded-3xl p-8 text-center border border-amber-100 space-y-2">
           <i data-lucide="check-circle" class="w-8 h-8 text-emerald-500 mx-auto"></i>
           <h4 class="text-sm font-bold text-oase-plum">Tidak ada laporan kendala</h4>
-          <p class="text-xs text-oase-muted">Semua kendala pada kategori ini telah selesai ditangani.</p>
+          <p class="text-xs text-oase-muted">${activeBugFilter === 'active' ? 'Semua pengaduan siswa saat ini telah selesai ditangani.' : 'Belum ada rekaman laporan pada kategori ini.'}</p>
         </div>
       `;
     } else {
       bugReportsListContainer.innerHTML = filtered.map(report => {
+        const isResolved = report.status === 'selesai';
         let statusBadge = '';
         if (report.status === 'baru') {
           statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black border border-rose-200">Menunggu Ditinjau</span>`;
@@ -862,69 +907,136 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         return `
-          <div class="bg-white rounded-2xl p-4 sm:p-5 border border-amber-100 shadow-2xs space-y-3">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-amber-50">
-              <div class="flex items-center gap-2">
+          <div class="bg-white rounded-2xl p-4 sm:p-5 border ${isResolved ? 'border-gray-200 bg-gray-50/50' : 'border-amber-200'} shadow-2xs space-y-3 transition-all">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-gray-100">
+              <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-xs font-extrabold text-amber-950">${escapeHtml(report.category)}</span>
                 ${statusBadge}
+                <span class="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-[10px] font-semibold">${escapeHtml(report.device || 'Perangkat Web')}</span>
               </div>
-              <span class="text-[11px] text-oase-muted">Dilaporkan: ${getTimeAgo(report.created_at)} (${escapeHtml(report.reporter)})</span>
+              <span class="text-[11px] text-gray-500">
+                ${getTimeAgo(report.created_at)} • <strong>${escapeHtml(report.reporter)}</strong> (${escapeHtml(report.reporter_email || 'Anonim')})
+              </span>
             </div>
 
-            <p class="text-xs sm:text-sm text-oase-plum leading-relaxed">
+            <p class="text-xs sm:text-sm text-gray-800 leading-relaxed bg-white p-3 rounded-xl border border-gray-100">
               ${escapeHtml(report.description)}
             </p>
 
-            <div class="flex items-center justify-between gap-2 pt-1 border-t border-amber-50 flex-wrap">
-              <div class="flex items-center gap-1.5 text-xs">
-                <span class="text-oase-muted text-[11px]">Ubah Status:</span>
-                <select class="bug-status-select bg-amber-50 border border-amber-200 rounded-lg text-xs font-bold text-amber-900 py-1 px-2 cursor-pointer focus:outline-none" data-bug-id="${report.id}">
-                  <option value="baru" ${report.status === 'baru' ? 'selected' : ''}>Menunggu Ditinjau</option>
-                  <option value="proses" ${report.status === 'proses' ? 'selected' : ''}>Sedang Diproses</option>
-                  <option value="selesai" ${report.status === 'selesai' ? 'selected' : ''}>Sudah Teratasi</option>
-                </select>
+            <div class="flex items-center justify-between gap-2 pt-1 border-t border-gray-100 flex-wrap">
+              <div class="flex items-center gap-2">
+                ${!isResolved ? `
+                  <button 
+                    type="button" 
+                    class="resolve-bug-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-98"
+                    data-bug-id="${report.id}"
+                    data-category="${escapeHtml(report.category)}"
+                  >
+                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                    <span>✓ Tandai Sudah Selesai</span>
+                  </button>
+                ` : `
+                  <span class="text-xs text-emerald-800 font-bold flex items-center gap-1">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
+                    <span>Telah diselesaikan oleh ${escapeHtml(report.resolved_by || 'Moderator')} (${getTimeAgo(report.resolved_at)})</span>
+                  </span>
+                `}
+
+                <div class="flex items-center gap-1.5 text-xs">
+                  <span class="text-gray-400 text-[11px]">Status:</span>
+                  <select class="bug-status-select bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-800 py-1 px-2 cursor-pointer focus:outline-none" data-bug-id="${report.id}" data-category="${escapeHtml(report.category)}">
+                    <option value="baru" ${report.status === 'baru' ? 'selected' : ''}>Menunggu Ditinjau</option>
+                    <option value="proses" ${report.status === 'proses' ? 'selected' : ''}>Sedang Diproses</option>
+                    <option value="selesai" ${report.status === 'selesai' ? 'selected' : ''}>Sudah Teratasi</option>
+                  </select>
+                </div>
               </div>
 
               <button 
                 type="button" 
-                class="delete-bug-btn text-rose-600 hover:text-rose-700 text-xs font-bold flex items-center gap-1 transition-colors"
+                class="delete-bug-btn text-rose-600 hover:text-rose-700 text-xs font-bold flex items-center gap-1 transition-colors px-2 py-1"
                 data-bug-id="${report.id}"
+                title="Hapus Laporan Secara Permanen"
               >
-                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
-                <span>Hapus Laporan</span>
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Hapus</span>
               </button>
             </div>
           </div>
         `;
       }).join('');
 
+      // Tombol Tandai Selesai Langsung
+      document.querySelectorAll('.resolve-bug-btn').forEach(btn => {
+        btn.onclick = async () => {
+          const bId = btn.dataset.bugId;
+          const cat = btn.dataset.category || 'Kendala Teknis';
+          const modName = currentModerator ? (currentModerator.display_name || currentModerator.email) : 'Moderator OASE';
+
+          if (window.BugReportService) {
+            await window.BugReportService.updateStatus(bId, 'selesai', modName);
+          } else {
+            const reports = getBugReports();
+            const target = reports.find(r => r.id === bId);
+            if (target) {
+              target.status = 'selesai';
+              target.resolved_by = modName;
+              target.resolved_at = new Date().toISOString();
+              saveBugReports(reports);
+            }
+          }
+
+          addAuditLog('SELESAIKAN_BUG', `Laporan: ${cat}`, `Diselesaikan oleh ${modName}`);
+          showToast(`Laporan "${cat}" berhasil diselesaikan dan dihapus dari antrean aktif.`);
+          renderBugReports();
+        };
+      });
+
       // Event listener status select
       document.querySelectorAll('.bug-status-select').forEach(sel => {
-        sel.onchange = () => {
+        sel.onchange = async () => {
           const bId = sel.dataset.bugId;
+          const cat = sel.dataset.category || 'Kendala Teknis';
           const newStatus = sel.value;
-          const reports = getBugReports();
-          const target = reports.find(r => r.id === bId);
-          if (target) {
-            target.status = newStatus;
-            saveBugReports(reports);
-            addAuditLog('UPDATE_STATUS_BUG', `Laporan ${target.category}`, `Status diubah menjadi: ${newStatus}`);
-            showToast(`Status laporan berhasil diubah ke: ${newStatus}`);
-            renderBugReports();
+          const modName = currentModerator ? (currentModerator.display_name || currentModerator.email) : 'Moderator OASE';
+
+          if (window.BugReportService) {
+            await window.BugReportService.updateStatus(bId, newStatus, modName);
+          } else {
+            const reports = getBugReports();
+            const target = reports.find(r => r.id === bId);
+            if (target) {
+              target.status = newStatus;
+              if (newStatus === 'selesai') {
+                target.resolved_by = modName;
+                target.resolved_at = new Date().toISOString();
+              }
+              saveBugReports(reports);
+            }
           }
+
+          addAuditLog('UPDATE_STATUS_BUG', `Laporan: ${cat}`, `Status diubah menjadi: ${newStatus}`);
+          showToast(`Status laporan berhasil diubah ke: ${newStatus}`);
+          renderBugReports();
         };
       });
 
       // Event listener delete bug
       document.querySelectorAll('.delete-bug-btn').forEach(btn => {
-        btn.onclick = () => {
+        btn.onclick = async () => {
           const bId = btn.dataset.bugId;
-          let reports = getBugReports();
-          reports = reports.filter(r => r.id !== bId);
-          saveBugReports(reports);
-          addAuditLog('HAPUS_LAPORAN_BUG', `Laporan ID: ${bId}`, 'Dihapus oleh moderator');
-          showToast('Laporan bug telah dihapus.');
-          renderBugReports();
+          if (confirm('Apakah kamu yakin ingin menghapus laporan kendala ini?')) {
+            if (window.BugReportService) {
+              await window.BugReportService.deleteReport(bId);
+            } else {
+              let reports = getBugReports();
+              reports = reports.filter(r => r.id !== bId);
+              saveBugReports(reports);
+            }
+            addAuditLog('HAPUS_LAPORAN_BUG', `ID: ${bId}`, 'Dihapus oleh moderator');
+            showToast('Laporan bug telah dihapus.');
+            renderBugReports();
+          }
         };
       });
     }
@@ -932,13 +1044,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.lucide) lucide.createIcons();
   }
 
-  // Filter Kategori Bug
+  // Filter Kategori Bug (Aktif vs Selesai vs Semua)
   document.querySelectorAll('.bug-filter-btn').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.bug-filter-btn').forEach(b => {
-        b.className = "bug-filter-btn px-3 py-1.5 rounded-xl bg-white border border-amber-200 text-amber-900 font-semibold hover:bg-amber-50";
+        b.className = "bug-filter-btn px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-700 font-semibold hover:bg-amber-50";
       });
-      btn.className = "bug-filter-btn px-3 py-1.5 rounded-xl bg-amber-600 text-white font-bold";
+      btn.className = "bug-filter-btn px-4 py-2 rounded-full bg-amber-600 text-white font-bold";
       activeBugFilter = btn.dataset.filter;
       renderBugReports();
     };
@@ -947,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Tambah Laporan Uji Coba Button
   const addSampleBugBtn = document.getElementById('addSampleBugBtn');
   if (addSampleBugBtn) {
-    addSampleBugBtn.onclick = () => {
+    addSampleBugBtn.onclick = async () => {
       const sampleCategories = [
         '📱 Tampilan Berantakan (Mobile/Desktop)',
         '⚙️ Tombol / Navigasi Macet',
@@ -955,24 +1067,150 @@ document.addEventListener('DOMContentLoaded', async () => {
         '🎧 Audio Relaksasi Mood'
       ];
       const randomCat = sampleCategories[Math.floor(Math.random() * sampleCategories.length)];
-      const reports = getBugReports();
-      reports.unshift({
-        id: 'bug-' + Date.now(),
-        category: randomCat,
-        description: `Laporan uji coba dari siswa: Menemukan sedikit keterlambatan saat memuat halaman pada koneksi lambat.`,
-        reporter: 'siswa_demo@oase.id',
-        status: 'baru',
-        created_at: new Date().toISOString()
-      });
-      saveBugReports(reports);
+      if (window.BugReportService) {
+        await window.BugReportService.submitReport({
+          reporterName: 'Siswa Percobaan (Uji Coba)',
+          reporterEmail: 'tester@oase.id',
+          category: randomCat,
+          device: 'Laptop Windows (Chrome)',
+          pageUrl: 'komunitas.html',
+          description: 'Laporan pengujian sistem dari moderator untuk memverifikasi alur kerja.'
+        });
+      }
       addAuditLog('TAMBAH_LAPORAN_BUG', randomCat, 'Laporan baru dibuat untuk pengujian');
-      showToast('Laporan uji coba berhasil ditambahkan!');
+      showToast('Laporan uji coba berhasil ditambahkan ke antrean aktif!');
       renderBugReports();
     };
   }
 
   // ============================================================================
-  // 9. FITUR 5: LOG AUDIT TINDAKAN MODERASI
+  // 9. FITUR 5: KAMUS SENSOR SARA DINAMIS (MULTI-MODERATOR SYNC)
+  // ============================================================================
+  async function renderSaraKeywords() {
+    let customList = [];
+    if (window.SaraKeywordService) {
+      customList = await window.SaraKeywordService.getCustomKeywords();
+    }
+
+    if (customKeywordsCountBadge) {
+      customKeywordsCountBadge.textContent = `${customList.length} Kata Terdaftar`;
+    }
+
+    if (!customKeywordsContainer) return;
+
+    if (customList.length === 0) {
+      customKeywordsContainer.innerHTML = `
+        <p class="text-xs text-rose-900/70 italic py-2">
+          Belum ada kosakata tambahan dari moderator. Klik tombol <strong>"+ Tambah Kosakata Terlarang"</strong> di atas untuk mendaftarkan kata baru yang akan langsung aktif di seluruh sistem.
+        </p>
+      `;
+    } else {
+      customKeywordsContainer.innerHTML = customList.map(kw => {
+        let catBadge = 'bg-rose-100 text-rose-800 border-rose-200';
+        let catLabel = 'SARA';
+        if (kw.category === 'kekerasan') {
+          catBadge = 'bg-amber-100 text-amber-800 border-amber-200';
+          catLabel = 'KEKERASAN';
+        } else if (kw.category === 'krisis') {
+          catBadge = 'bg-indigo-100 text-indigo-800 border-indigo-200';
+          catLabel = 'KRISIS';
+        } else if (kw.category === 'lainnya') {
+          catBadge = 'bg-gray-100 text-gray-800 border-gray-200';
+          catLabel = 'UMUM';
+        }
+
+        return `
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-rose-200 shadow-2xs text-xs text-rose-950 animate-fadeIn">
+            <span class="font-extrabold text-rose-900">"${escapeHtml(kw.keyword)}"</span>
+            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase border ${catBadge}">${catLabel}</span>
+            <span class="text-[10px] text-gray-400">oleh ${escapeHtml(kw.added_by || 'Moderator')}</span>
+            <button class="delete-sara-keyword-btn p-0.5 text-gray-400 hover:text-rose-600 transition-colors" data-id="${kw.id}" data-word="${escapeHtml(kw.keyword)}" title="Hapus kata kunci ini">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.delete-sara-keyword-btn').forEach(btn => {
+        btn.onclick = async () => {
+          const kwId = btn.dataset.id;
+          const word = btn.dataset.word;
+          if (confirm(`Apakah kamu yakin ingin menghapus kosakata "${word}" dari kamus sensor SARA?`)) {
+            if (window.SaraKeywordService) {
+              await window.SaraKeywordService.deleteKeyword(kwId);
+            }
+            addAuditLog('HAPUS_KATA_SARA', `Kata: "${word}"`, 'Dihapus dari kamus sensor');
+            showToast(`Kosakata "${word}" berhasil dihapus.`);
+            renderSaraKeywords();
+            renderHateSpeechAlerts();
+          }
+        };
+      });
+    }
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // Modal Tambah Kosakata Sensor SARA
+  if (openAddKeywordModalBtn) {
+    openAddKeywordModalBtn.onclick = () => {
+      if (addSaraKeywordModal) {
+        addSaraKeywordModal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        if (newSaraKeywordInput) {
+          newSaraKeywordInput.value = '';
+          newSaraKeywordInput.focus();
+        }
+      }
+    };
+  }
+
+  function closeAddKeywordModal() {
+    if (addSaraKeywordModal) {
+      addSaraKeywordModal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+  }
+
+  if (closeAddKeywordModalBtn) closeAddKeywordModalBtn.onclick = closeAddKeywordModal;
+  if (cancelAddKeywordBtn) cancelAddKeywordBtn.onclick = closeAddKeywordModal;
+
+  if (addSaraKeywordForm) {
+    addSaraKeywordForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const keyword = newSaraKeywordInput.value.trim();
+      const category = newSaraCategorySelect.value;
+      const note = newSaraNoteInput.value.trim();
+      const addedBy = currentModerator ? (currentModerator.display_name || currentModerator.email) : 'Moderator OASE';
+
+      if (!keyword) {
+        alert('Mohon masukkan kosakata atau frasa terlarang.');
+        return;
+      }
+
+      try {
+        if (window.SaraKeywordService) {
+          await window.SaraKeywordService.addKeyword({
+            keyword,
+            category,
+            note,
+            addedBy
+          });
+        }
+        addAuditLog('TAMBAH_KATA_SARA', `Kata: "${keyword}"`, `Kategori: ${category}`);
+        closeAddKeywordModal();
+        await renderSaraKeywords();
+        renderHateSpeechAlerts();
+        showToast(`Kosakata "${keyword}" berhasil disimpan dan disinkronkan ke seluruh moderator! 🛡️`);
+      } catch (err) {
+        console.error('Error adding keyword:', err);
+        alert(err.message || 'Gagal menyimpan kata kunci.');
+      }
+    };
+  }
+
+  // ============================================================================
+  // 10. FITUR 6: LOG AUDIT TINDAKAN MODERASI
   // ============================================================================
   function renderAuditLogs() {
     const logs = getAuditLogs();
@@ -1013,24 +1251,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ============================================================================
-  // 10. NAVIGASI TAB MODERATOR
+  // 11. NAVIGASI TAB MODERATOR (CAPSULE PILL STYLE)
   // ============================================================================
   function switchTab(tabKey) {
     activeTab = tabKey;
     const tabs = [
-      { key: 'hateSpeech', btn: tabBtnHateSpeech, sec: sectionHateSpeech, activeCls: 'bg-rose-600 text-white' },
-      { key: 'allComments', btn: tabBtnAllComments, sec: sectionAllComments, activeCls: 'bg-heather-600 text-white' },
-      { key: 'bugReports', btn: tabBtnBugReports, sec: sectionBugReports, activeCls: 'bg-amber-600 text-white' },
-      { key: 'auditLogs', btn: tabBtnAuditLogs, sec: sectionAuditLogs, activeCls: 'bg-heather-600 text-white' },
-      { key: 'keywords', btn: tabBtnKeywords, sec: sectionKeywords, activeCls: 'bg-heather-600 text-white' }
+      { key: 'hateSpeech', btn: tabBtnHateSpeech, sec: sectionHateSpeech },
+      { key: 'allComments', btn: tabBtnAllComments, sec: sectionAllComments },
+      { key: 'bugReports', btn: tabBtnBugReports, sec: sectionBugReports },
+      { key: 'keywords', btn: tabBtnKeywords, sec: sectionKeywords },
+      { key: 'auditLogs', btn: tabBtnAuditLogs, sec: sectionAuditLogs }
     ];
 
     tabs.forEach(t => {
+      if (!t.btn || !t.sec) return;
       if (t.key === tabKey) {
-        t.btn.className = `px-4 sm:px-5 py-2.5 rounded-2xl ${t.activeCls} font-bold text-xs shadow-sm flex items-center gap-2 transition-all`;
+        t.btn.className = `px-5 py-2.5 rounded-full bg-[#8E3476] text-white font-bold text-xs shadow-xs flex items-center gap-2 transition-all`;
         t.sec.classList.remove('hidden');
       } else {
-        t.btn.className = `px-4 sm:px-5 py-2.5 rounded-2xl bg-white border border-oase-border hover:bg-heather-50 text-oase-muted font-bold text-xs flex items-center gap-2 transition-all`;
+        t.btn.className = `px-5 py-2.5 rounded-full bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-bold text-xs flex items-center gap-2 transition-all`;
         t.sec.classList.add('hidden');
       }
     });
@@ -1041,8 +1280,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (tabBtnHateSpeech) tabBtnHateSpeech.onclick = () => switchTab('hateSpeech');
   if (tabBtnAllComments) tabBtnAllComments.onclick = () => switchTab('allComments');
   if (tabBtnBugReports) tabBtnBugReports.onclick = () => switchTab('bugReports');
-  if (tabBtnAuditLogs) tabBtnAuditLogs.onclick = () => switchTab('auditLogs');
   if (tabBtnKeywords) tabBtnKeywords.onclick = () => switchTab('keywords');
+  if (tabBtnAuditLogs) tabBtnAuditLogs.onclick = () => switchTab('auditLogs');
 
   // Search input filter untuk seluruh komentar
   if (commentSearchInput) {
@@ -1187,15 +1426,57 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ============================================================================
-  // 12. RUN AWAL
+  // 12. RUN AWAL & REAL-TIME EVENT SUBSCRIBERS
   // ============================================================================
-  function initDashboard() {
+  let isRealtimeSubscribed = false;
+
+  async function initDashboard() {
     setupWarmGreeting();
     renderHateSpeechAlerts();
     renderAllCommunityComments();
-    renderBugReports();
+    await renderBugReports();
+    await renderSaraKeywords();
     renderAuditLogs();
     switchTab('hateSpeech');
+
+    // Inisialisasi Real-time Sync untuk Laporan Bug & Kamus SARA
+    if (!isRealtimeSubscribed) {
+      isRealtimeSubscribed = true;
+
+      // 1. Sinkronisasi Real-time Laporan Bug antar Moderator
+      if (window.BugReportService && typeof window.BugReportService.initRealtime === 'function') {
+        window.BugReportService.initRealtime();
+        window.BugReportService.onUpdate((data) => {
+          if (!data) return;
+          renderBugReports();
+
+          if (data.action === 'STATUS_CHANGED' && data.payload) {
+            if (data.payload.newStatus === 'selesai') {
+              showToast(`Laporan ${data.payload.report?.category || 'kendala'} telah diselesaikan oleh ${data.payload.resolvedBy || 'Moderator lain'}.`);
+            }
+          } else if (data.action === 'NEW_REPORT' && data.payload) {
+            playAlertPing();
+            showToast(`⚠️ Laporan bug baru masuk: ${data.payload.category}`);
+          }
+        });
+      }
+
+      // 2. Sinkronisasi Real-time Kamus Sensor SARA antar Seluruh Moderator
+      if (window.SaraKeywordService && typeof window.SaraKeywordService.initRealtime === 'function') {
+        window.SaraKeywordService.initRealtime();
+        window.SaraKeywordService.onUpdate((data) => {
+          if (!data) return;
+          renderSaraKeywords();
+          renderHateSpeechAlerts();
+
+          if (data.action === 'ADD' && data.payload) {
+            showToast(`Moderator ${data.payload.added_by || 'lain'} mendaftarkan kosakata sensor baru: "${data.payload.keyword}"`);
+          } else if (data.action === 'DELETE') {
+            showToast('Daftar kamus sensor SARA diperbarui.');
+          }
+        });
+      }
+    }
 
     // Cek apakah ada hate speech terdeteksi saat load untuk alarm
     const { flaggedList } = scanCommunityCommentsForHateSpeech();

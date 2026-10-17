@@ -274,13 +274,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           const isMod = (window.AuthService && typeof window.AuthService.isModeratorEmail === 'function')
             ? window.AuthService.isModeratorEmail(email, profile)
-            : ((profile && profile.role === 'moderator') || 
-               email.toLowerCase().includes('moderator') || 
-               email.toLowerCase().includes('admin'));
+            : (profile && profile.role === 'moderator');
 
           if (!isMod) {
             await window.AuthService.signOut();
-            showAuthFeedback('Akses Ditolak: Akun ini terdaftar sebagai Pengguna Biasa dan tidak memiliki wewenang Moderator. Silakan beralih ke tab User Biasa.', 'error');
+            showAuthFeedback('Akses Ditolak: Akun ini tidak terdaftar dalam daftar resmi staf/moderator OASE. Silakan beralih ke tab User Biasa.', 'error');
             return;
           }
 
@@ -307,9 +305,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.href = targetUrl;
           }, 800);
         } else {
-          // Pendaftaran Akun Siswa Baru
+          // Pendaftaran Akun Siswa Baru (Selalu role: 'user')
           await window.AuthService.signUp(email, password);
-          showAuthFeedback('Pendaftaran berhasil! Akun Anda telah aktif di database Supabase.', 'success');
+
+          // Daftarkan profil awal secara eksplisit sebagai user biasa (bukan moderator)
+          try {
+            const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
+            savedProfiles[email] = {
+              email,
+              role: 'user',
+              display_name: 'Sahabat OASE',
+              full_name: 'Sahabat OASE'
+            };
+            localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
+          } catch(e) {}
+
+          showAuthFeedback('Pendaftaran berhasil! Akun Anda telah aktif sebagai Pengguna Siswa.', 'success');
           setTimeout(() => {
             setAuthMode('login');
           }, 1500);
