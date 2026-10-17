@@ -461,11 +461,94 @@ const AuthService = {
     return { success: true, status: 'pending' };
   },
 
-  // Daftar Akun Moderator Resmi (Whitelist OASE)
+  // Daftar Akun Moderator Resmi (Whitelist Bawaan OASE)
   MODERATORS_LIST: [
     'moderator@oase.id',
     'arkhanzaazs020911@gmail.com'
   ],
+
+  // Ambil daftar seluruh email moderator terdaftar (Bawaan + Dinamis)
+  getAllModeratorEmails() {
+    try {
+      const dynamic = JSON.parse(localStorage.getItem('oase_custom_moderator_whitelist') || '[]');
+      const combined = [...this.MODERATORS_LIST, ...dynamic];
+      return Array.from(new Set(combined.map(e => e.toLowerCase().trim())));
+    } catch (e) {
+      return [...this.MODERATORS_LIST];
+    }
+  },
+
+  // Tambah email moderator baru ke whitelist resmi
+  async addModeratorEmail(email, addedBy = 'Moderator Utama') {
+    if (!email || !email.includes('@')) {
+      throw new Error('Alamat email tidak valid.');
+    }
+    const cleanEmail = email.toLowerCase().trim();
+    const currentList = this.getAllModeratorEmails();
+    if (currentList.includes(cleanEmail)) {
+      throw new Error('Email ini sudah terdaftar sebagai moderator resmi.');
+    }
+
+    // 1. Simpan ke database Supabase jika tabel profiles tersedia
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('profiles').upsert({
+          email: cleanEmail,
+          role: 'moderator',
+          display_name: cleanEmail.split('@')[0],
+          moderator_approval_status: 'approved',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'email' });
+      } catch (e) {}
+    }
+
+    // 2. Simpan ke dynamic whitelist browser
+    const dynamic = JSON.parse(localStorage.getItem('oase_custom_moderator_whitelist') || '[]');
+    if (!dynamic.includes(cleanEmail)) {
+      dynamic.push(cleanEmail);
+      localStorage.setItem('oase_custom_moderator_whitelist', JSON.stringify(dynamic));
+    }
+
+    // 3. Simpan profil lokal
+    const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
+    savedProfiles[cleanEmail] = {
+      email: cleanEmail,
+      role: 'moderator',
+      display_name: cleanEmail.split('@')[0],
+      moderator_approval_status: 'approved',
+      added_by: addedBy,
+      added_at: new Date().toISOString()
+    };
+    localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
+
+    return { success: true, email: cleanEmail };
+  },
+
+  // Hapus email dari daftar moderator dinamis
+  async removeModeratorEmail(email) {
+    const cleanEmail = email.toLowerCase().trim();
+    if (this.MODERATORS_LIST.some(e => e.toLowerCase().trim() === cleanEmail)) {
+      throw new Error('Akun moderator utama bawaan tidak dapat dihapus.');
+    }
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('profiles').update({ role: 'user' }).eq('email', cleanEmail);
+      } catch (e) {}
+    }
+
+    let dynamic = JSON.parse(localStorage.getItem('oase_custom_moderator_whitelist') || '[]');
+    dynamic = dynamic.filter(e => e.toLowerCase().trim() !== cleanEmail);
+    localStorage.setItem('oase_custom_moderator_whitelist', JSON.stringify(dynamic));
+
+    const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
+    if (savedProfiles[cleanEmail]) {
+      savedProfiles[cleanEmail].role = 'user';
+      localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
+    }
+
+    return { success: true };
+  },
 
   // Cek apakah akun memiliki hak akses Moderator resmi secara ketat (Tanpa bypass substring)
   isModeratorEmail(email, profile = null) {
@@ -473,8 +556,9 @@ const AuthService = {
     const lower = email.toLowerCase().trim();
     // 1. Cek role resmi di profil database Supabase
     if (profile && profile.role === 'moderator') return true;
-    // 2. Cek apakah email terdaftar persis dalam whitelist resmi OASE
-    return this.MODERATORS_LIST.some(e => e.toLowerCase().trim() === lower);
+    // 2. Cek apakah email terdaftar persis dalam whitelist resmi OASE (Bawaan + Dinamis)
+    const allMods = this.getAllModeratorEmails();
+    return allMods.includes(lower);
   }
 };
 

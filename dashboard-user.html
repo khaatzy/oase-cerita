@@ -62,6 +62,12 @@
       <!-- Right Header Actions (Cek Tiket, Notifikasi Push, Lonceng, & Hamburger Menu) -->
       <div class="flex items-center gap-2 sm:gap-3">
 
+        <!-- Tombol Lapor Bug -->
+        <a href="lapor-bug.html" class="px-2.5 sm:px-3 py-2 rounded-2xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs" title="Laporkan Bug atau Kendala Sistem">
+          <i data-lucide="bug" class="w-3.5 h-3.5 text-amber-600"></i>
+          <span class="hidden xl:inline">Lapor Bug</span>
+        </a>
+
         <!-- Tombol Cek Balasan Konselor (Tiket) -->
         <button id="navCheckTicketBtn" class="px-2.5 sm:px-3.5 py-2 rounded-2xl border-2 border-rose-300 bg-rose-50/80 hover:bg-rose-100 text-rose-800 text-[11px] sm:text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-sm" title="Cek Balasan dari Konselor">
           <i data-lucide="ticket" class="w-3.5 h-3.5 text-rose-600"></i>
@@ -232,6 +238,17 @@
           </div>
           <i data-lucide="chevron-right" class="w-4 h-4 text-rose-400"></i>
         </button>
+
+        <!-- Lapor Bug / Kendala -->
+        <a href="lapor-bug.html" class="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-amber-50 text-left text-sm font-bold text-amber-900 border border-transparent hover:border-amber-200 transition-all group">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <i data-lucide="bug" class="w-5 h-5"></i>
+            </div>
+            <span>Laporkan Kendala / Bug</span>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-amber-500"></i>
+        </a>
       </div>
     </div>
 

@@ -89,7 +89,13 @@
       </div>
 
       <!-- Counselor Profile Bar & Actions -->
-      <div id="counselorProfileNav" class="flex items-center gap-3">
+      <div id="counselorProfileNav" class="flex items-center gap-2 sm:gap-3">
+        <!-- Lapor Bug Button -->
+        <a href="lapor-bug.html" class="px-2.5 sm:px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs" title="Laporkan Bug atau Masalah Sistem">
+          <i data-lucide="bug" class="w-3.5 h-3.5 text-amber-600"></i>
+          <span class="hidden md:inline">Lapor Bug</span>
+        </a>
+
         <!-- Notifikasi Konselor -->
         <div class="relative">
           <button id="counselorNotifBellBtn" class="p-2.5 rounded-2xl border border-oase-border hover:bg-heather-50 text-oase-muted hover:text-heather-600 transition-all relative" title="Pemberitahuan Masuk">
@@ -335,8 +341,13 @@
 
   <!-- Footer -->
   <footer class="mt-12 bg-white/70 border-t border-oase-border py-6 text-center text-xs text-oase-muted">
-    <div class="max-w-7xl mx-auto px-4">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
       <p>&copy; 2026 OASE Cerita. Portal Rahasia Konselor & Pendampingan Psikologis.</p>
+      <div class="flex items-center gap-3 text-[11px] font-semibold text-heather-700">
+        <a href="lapor-bug.html" class="hover:underline text-amber-700">Laporkan Bug</a>
+        <span>•</span>
+        <a href="laman-moderator.html" class="hover:underline text-rose-700">Portal Moderator</a>
+      </div>
     </div>
   </footer>
 

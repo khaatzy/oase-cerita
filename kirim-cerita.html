@@ -109,8 +109,12 @@
         </div>
       </div>
 
-      <!-- Action: Cek Status Tiket -->
+      <!-- Action: Lapor Bug & Cek Status Tiket -->
       <div class="flex items-center gap-2">
+        <a href="lapor-bug.html" class="px-3 py-2 rounded-full border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-2xs" title="Laporkan Kendala atau Bug">
+          <i data-lucide="bug" class="w-3.5 h-3.5 text-amber-600"></i>
+          <span class="hidden sm:inline">Lapor Bug</span>
+        </a>
         <button id="openCheckTicketBtn" class="px-4 py-2 rounded-full border border-heather-300 bg-white text-heather-700 hover:bg-heather-50 text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-sm">
           <i data-lucide="ticket" class="w-4 h-4 text-heather-500"></i>
           <span>Cek Status Curhat</span>
@@ -420,8 +424,13 @@
 
   <!-- Footer -->
   <footer class="mt-12 bg-white/60 border-t border-oase-border py-6 text-center text-xs text-oase-muted">
-    <div class="max-w-5xl mx-auto px-4">
+    <div class="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
       <p>&copy; 2026 OASE Cerita. Ruang Aman Curhat & Konseling Anonim.</p>
+      <div class="flex items-center gap-3 text-[11px] font-semibold text-heather-700">
+        <a href="lapor-bug.html" class="hover:underline text-amber-700">Laporkan Bug</a>
+        <span>•</span>
+        <a href="laman-moderator.html" class="hover:underline text-rose-700">Portal Moderator</a>
+      </div>
     </div>
   </footer>
 

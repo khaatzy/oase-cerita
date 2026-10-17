@@ -87,6 +87,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const newSaraCategorySelect = document.getElementById('newSaraCategorySelect');
   const newSaraNoteInput = document.getElementById('newSaraNoteInput');
 
+  // Kelola Akun Moderator Modal
+  const openManageModsBtn = document.getElementById('openManageModsBtn');
+  const manageModsModal = document.getElementById('manageModsModal');
+  const closeManageModsModalBtn = document.getElementById('closeManageModsModalBtn');
+  const closeManageModsModalBtn2 = document.getElementById('closeManageModsModalBtn2');
+  const addModEmailForm = document.getElementById('addModEmailForm');
+  const newModEmailInput = document.getElementById('newModEmailInput');
+  const authorizedModsList = document.getElementById('authorizedModsList');
+  const modsTotalCountBadge = document.getElementById('modsTotalCountBadge');
+
   // Modals & Forms
   const deleteModal = document.getElementById('deleteModal');
   const deleteCommentPreview = document.getElementById('deleteCommentPreview');
@@ -1210,7 +1220,116 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ============================================================================
-  // 10. FITUR 6: LOG AUDIT TINDAKAN MODERASI
+  // 10. FITUR KHUSUS: MANAJEMEN AKUN MODERATOR RESMI (WHITELIST)
+  // ============================================================================
+  function renderAuthorizedModerators() {
+    if (!authorizedModsList) return;
+    const allMods = (window.AuthService && typeof window.AuthService.getAllModeratorEmails === 'function')
+      ? window.AuthService.getAllModeratorEmails()
+      : (window.AuthService && window.AuthService.MODERATORS_LIST ? window.AuthService.MODERATORS_LIST : ['moderator@oase.id']);
+
+    if (modsTotalCountBadge) {
+      modsTotalCountBadge.textContent = `${allMods.length} Akun`;
+    }
+
+    const defaultMods = (window.AuthService && window.AuthService.MODERATORS_LIST) || [];
+
+    authorizedModsList.innerHTML = allMods.map(email => {
+      const isDefault = defaultMods.some(dm => dm.toLowerCase() === email.toLowerCase());
+      return `
+        <div class="flex items-center justify-between p-2.5 rounded-xl border border-gray-100 bg-gray-50/70 text-xs">
+          <div class="flex items-center gap-2 overflow-hidden">
+            <div class="w-6 h-6 rounded-full bg-heather-100 text-heather-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+              <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+            </div>
+            <span class="font-bold text-gray-800 truncate">${escapeHtml(email)}</span>
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${isDefault ? 'bg-heather-100 text-heather-800' : 'bg-emerald-100 text-emerald-800'}">
+              ${isDefault ? 'Utama' : 'Tambahan'}
+            </span>
+          </div>
+
+          ${!isDefault ? `
+            <button class="remove-mod-btn text-gray-400 hover:text-rose-600 p-1 transition-colors" data-email="${escapeHtml(email)}" title="Hapus otorisasi moderator">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          ` : `
+            <span class="text-[10px] text-gray-400 font-semibold px-1">Sistem</span>
+          `}
+        </div>
+      `;
+    }).join('');
+
+    document.querySelectorAll('.remove-mod-btn').forEach(btn => {
+      btn.onclick = async () => {
+        const em = btn.dataset.email;
+        if (confirm(`Apakah kamu yakin ingin mencabut hak akses moderator untuk akun: ${em}?`)) {
+          try {
+            if (window.AuthService && typeof window.AuthService.removeModeratorEmail === 'function') {
+              await window.AuthService.removeModeratorEmail(em);
+            }
+            addAuditLog('CABUT_MODERATOR', `Email: ${em}`, 'Dicabut oleh moderator');
+            showToast(`Hak akses moderator untuk ${em} berhasil dicabut.`);
+            renderAuthorizedModerators();
+          } catch(err) {
+            alert(err.message || 'Gagal menghapus moderator.');
+          }
+        }
+      };
+    });
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // Modal Kelola Akun Moderator
+  if (openManageModsBtn) {
+    openManageModsBtn.onclick = () => {
+      if (manageModsModal) {
+        manageModsModal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        renderAuthorizedModerators();
+        if (newModEmailInput) {
+          newModEmailInput.value = '';
+          newModEmailInput.focus();
+        }
+      }
+    };
+  }
+
+  function closeManageModsModal() {
+    if (manageModsModal) {
+      manageModsModal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+  }
+
+  if (closeManageModsModalBtn) closeManageModsModalBtn.onclick = closeManageModsModal;
+  if (closeManageModsModalBtn2) closeManageModsModalBtn2.onclick = closeManageModsModal;
+
+  if (addModEmailForm) {
+    addModEmailForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = newModEmailInput.value.trim();
+      if (!email || !email.includes('@')) {
+        alert('Mohon masukkan alamat email yang valid.');
+        return;
+      }
+
+      try {
+        if (window.AuthService && typeof window.AuthService.addModeratorEmail === 'function') {
+          await window.AuthService.addModeratorEmail(email, currentModerator ? (currentModerator.display_name || currentModerator.email) : 'Moderator Utama');
+        }
+        addAuditLog('TAMBAH_MODERATOR', `Email: ${email}`, 'Diberikan otorisasi moderator resmi');
+        showToast(`Akun ${email} berhasil didaftarkan sebagai Moderator Resmi! 🛡️`);
+        newModEmailInput.value = '';
+        renderAuthorizedModerators();
+      } catch(err) {
+        alert(err.message || 'Gagal menambahkan akun moderator.');
+      }
+    };
+  }
+
+  // ============================================================================
+  // 11. FITUR 6: LOG AUDIT TINDAKAN MODERASI
   // ============================================================================
   function renderAuditLogs() {
     const logs = getAuditLogs();
@@ -1436,6 +1555,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAllCommunityComments();
     await renderBugReports();
     await renderSaraKeywords();
+    renderAuthorizedModerators();
     renderAuditLogs();
     switchTab('hateSpeech');
 
