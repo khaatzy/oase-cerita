@@ -1739,8 +1739,8 @@ const CommunityService = {
       emotion: 'Cemas',
       created_at: new Date(Date.now() - 3600000 * 3).toISOString(),
       story_content: 'Menjelang ujian akhir sekolah ini kepalaku sering pusing dan overthinking takut tidak bisa membanggakan orang tua. Kadang rasanya ingin istirahat sejenak tapi takut tertinggal oleh teman-teman yang lain.',
-      hugs: 14,
-      cheers: 22
+      hugs: 0,
+      cheers: 0
     },
     {
       id: 'story-kom-2',
@@ -1749,8 +1749,8 @@ const CommunityService = {
       emotion: 'Kesepian',
       created_at: new Date(Date.now() - 3600000 * 8).toISOString(),
       story_content: 'Di kelas rasanya ramai sekali, tapi kenapa aku merasa sangat sendiri ya? Teman-teman sekelompok asyik membicarakan hal yang tidak kupahami. Ada yang pernah merasa asing di tengah keramaian seperti ini?',
-      hugs: 31,
-      cheers: 19
+      hugs: 0,
+      cheers: 0
     },
     {
       id: 'story-kom-3',
@@ -1759,8 +1759,8 @@ const CommunityService = {
       emotion: 'Lelah',
       created_at: new Date(Date.now() - 3600000 * 18).toISOString(),
       story_content: 'Ekspektasi orang tua terhadap nilaiku begitu tinggi. Setiap kali pulang membawa nilai 80 selalu dibandingkan dengan saudara yang dapat 95. Tapi hari ini aku bersyukur masih bisa tersenyum dan menemukan ruang aman ini.',
-      hugs: 45,
-      cheers: 38
+      hugs: 0,
+      cheers: 0
     }
   ],
 
@@ -1887,6 +1887,15 @@ const CommunityService = {
         });
         localStorage.setItem('oase_community_comments', JSON.stringify(comments));
       }
+    } else if (data.action === 'DELETE_STORY' && data.payload) {
+      let stories = this.getStoredStoriesSync();
+      stories = stories.filter(s => s.id !== data.payload.storyId);
+      localStorage.setItem('oase_community_stories', JSON.stringify(stories));
+      const comments = this.getStoredCommentsSync();
+      if (comments[data.payload.storyId]) {
+        delete comments[data.payload.storyId];
+        localStorage.setItem('oase_community_comments', JSON.stringify(comments));
+      }
     } else if (data.action === 'REACTION' && data.payload) {
       const { storyId, type, count } = data.payload;
       const stories = this.getStoredStoriesSync();
@@ -1901,8 +1910,10 @@ const CommunityService = {
 
   getStoredStoriesSync() {
     try {
-      const local = JSON.parse(localStorage.getItem('oase_community_stories') || '[]');
-      if (local && local.length > 0) return local;
+      const raw = localStorage.getItem('oase_community_stories');
+      if (raw !== null) {
+        return JSON.parse(raw);
+      }
       return [...this.DEFAULT_STORIES];
     } catch(e) {
       return [...this.DEFAULT_STORIES];
@@ -1927,6 +1938,7 @@ const CommunityService = {
           .select('*')
           .not('emotion_tag', 'ilike', 'COMMENT:%')
           .not('emotion_tag', 'eq', 'DELETED_COMMENT')
+          .not('emotion_tag', 'eq', 'DELETED_STORY')
           .order('created_at', { ascending: false });
 
         if (!error && data && data.length > 0) {
@@ -2227,6 +2239,54 @@ const CommunityService = {
 
     this._broadcast('REACTION', { storyId, type, count: newCount });
     return newCount;
+  },
+
+  async deleteStory(storyId, deletedBy = 'Moderator', reason = '') {
+    if (!storyId) return false;
+
+    if (supabaseClient) {
+      // 1. Tandai cerita telah dihapus di public.stories
+      try {
+        await supabaseClient
+          .from('stories')
+          .update({
+            emotion_tag: 'DELETED_STORY',
+            content: '[Cerita ini telah dihapus oleh Moderator]'
+          })
+          .eq('id', storyId);
+      } catch(e) {}
+
+      // 2. Tandai komentar terkait cerita ini dihapus
+      try {
+        await supabaseClient
+          .from('stories')
+          .update({
+            emotion_tag: 'DELETED_COMMENT',
+            content: '[Dihapus bersama cerita]'
+          })
+          .eq('emotion_tag', 'COMMENT:' + storyId);
+      } catch(e) {}
+
+      // 3. Cadangan hapus dari community_stories jika tabel ada
+      try {
+        await supabaseClient.from('community_stories').delete().eq('id', storyId);
+      } catch(e) {}
+    }
+
+    // Hapus dari cache cerita lokal
+    let stories = this.getStoredStoriesSync();
+    stories = stories.filter(s => s.id !== storyId);
+    localStorage.setItem('oase_community_stories', JSON.stringify(stories));
+
+    // Hapus dari komentar cerita lokal
+    const comments = this.getStoredCommentsSync();
+    if (comments[storyId]) {
+      delete comments[storyId];
+      localStorage.setItem('oase_community_comments', JSON.stringify(comments));
+    }
+
+    this._broadcast('DELETE_STORY', { storyId, deletedBy, reason });
+    return true;
   }
 };
 

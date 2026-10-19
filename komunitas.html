@@ -284,6 +284,47 @@
     </div>
   </div>
 
+  <!-- Modal Konfirmasi Hapus Cerita (Khusus Moderator) -->
+  <div id="deleteStoryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-oase-plum/70 backdrop-blur-sm hidden animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 border-2 border-rose-200 shadow-2xl space-y-4 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+        <i data-lucide="alert-octagon" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-extrabold text-oase-plum">Hapus Cerita Pengguna Ini?</h3>
+        <p id="deleteStoryModalDesc" class="text-xs text-oase-muted mt-1.5 leading-relaxed">
+          Wewenang Moderator: Cerita ini beserta seluruh komentarnya akan dihapus dari komunitas OASE.
+        </p>
+      </div>
+      <div class="flex items-center gap-2 pt-2">
+        <button id="cancelDeleteStoryBtn" type="button" class="flex-1 py-2.5 rounded-xl border border-oase-border hover:bg-slate-50 text-xs font-semibold text-oase-muted transition-all">
+          Batal
+        </button>
+        <button id="confirmDeleteStoryBtn" type="button" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-sm">
+          Ya, Hapus Cerita
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Peringatan SARA / Kata Terlarang -->
+  <div id="saraWarningModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-oase-plum/70 backdrop-blur-sm hidden animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 border-2 border-rose-300 shadow-2xl space-y-4 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+        <i data-lucide="shield-alert" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-extrabold text-rose-900">Kata Terlarang / SARA Terdeteksi!</h3>
+        <p id="saraWarningModalMessage" class="text-xs text-rose-800 mt-2 leading-relaxed bg-rose-50 p-3 rounded-xl border border-rose-200 font-medium">
+          Teks Anda mengandung kata yang dilarang. Demi menjaga ruang empati OASE tetap aman dan bebas dari perundungan, konten tidak dapat dikirim.
+        </p>
+      </div>
+      <button id="closeSaraWarningBtn" type="button" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-sm">
+        Saya Mengerti & Perbaiki
+      </button>
+    </div>
+  </div>
+
   <!-- Footer -->
   <footer class="bg-white border-t border-oase-border/80 mt-auto py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-oase-muted space-y-2">

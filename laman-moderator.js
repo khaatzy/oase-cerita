@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let activeTab = 'hateSpeech'; // 'hateSpeech', 'allComments', 'bugReports', 'keywords', 'auditLogs'
   let activeBugFilter = 'active'; // 'active', 'selesai', 'all'
   let commentToDelete = null; // { storyId, commentId, author, text, source }
+  let storyToDelete = null; // { storyId, author, text }
   let isAlarmSoundEnabled = localStorage.getItem('oase_mod_sound_enabled') !== 'false';
   let currentAuthRole = 'moderator'; // 'user' or 'moderator'
   let currentAuthMode = 'login'; // 'login' or 'register'
@@ -75,6 +76,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const auditLogsContainer = document.getElementById('auditLogsContainer');
   const commentSearchInput = document.getElementById('commentSearchInput');
 
+  // Sub-Tabs Konten Komunitas (Komentar vs Cerita Siswa)
+  const subTabCommentsBtn = document.getElementById('subTabCommentsBtn');
+  const subTabStoriesBtn = document.getElementById('subTabStoriesBtn');
+  const subViewComments = document.getElementById('subViewComments');
+  const subViewStories = document.getElementById('subViewStories');
+  const storySearchInput = document.getElementById('storySearchInput');
+  const refreshAllStoriesBtn = document.getElementById('refreshAllStoriesBtn');
+  const allStoriesListContainer = document.getElementById('allStoriesListContainer');
+
   // SARA Keywords & Modal
   const customKeywordsContainer = document.getElementById('customKeywordsContainer');
   const customKeywordsCountBadge = document.getElementById('customKeywordsCountBadge');
@@ -102,6 +112,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const deleteCommentPreview = document.getElementById('deleteCommentPreview');
   const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
   const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+  const deleteStoryModalModerator = document.getElementById('deleteStoryModalModerator');
+  const deleteStoryPreviewModerator = document.getElementById('deleteStoryPreviewModerator');
+  const cancelDeleteStoryBtnModerator = document.getElementById('cancelDeleteStoryBtnModerator');
+  const confirmDeleteStoryBtnModerator = document.getElementById('confirmDeleteStoryBtnModerator');
 
   const dualAuthModal = document.getElementById('dualAuthModal');
   const roleTabUser = document.getElementById('roleTabUser');
@@ -1037,6 +1052,178 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ============================================================================
+  // 7b. MANAJEMEN CERITA SISWA (WEWENANG HAPUS CERITA SISWA OLEH MODERATOR)
+  // ============================================================================
+  function renderAllCommunityStories(filterQuery = '') {
+    if (!allStoriesListContainer) return;
+    const stories = (window.CommunityService && typeof window.CommunityService.getStoredStoriesSync === 'function')
+      ? window.CommunityService.getStoredStoriesSync()
+      : JSON.parse(localStorage.getItem('oase_community_stories') || '[]');
+
+    const query = (filterQuery || '').toLowerCase().trim();
+    const filtered = stories.filter(s => {
+      if (!query) return true;
+      const author = (s.author_name || s.author || '').toLowerCase();
+      const content = (s.content || s.story_content || '').toLowerCase();
+      const category = (s.category || s.emotion || '').toLowerCase();
+      return author.includes(query) || content.includes(query) || category.includes(query);
+    });
+
+    if (filtered.length === 0) {
+      allStoriesListContainer.innerHTML = `
+        <div class="bg-white rounded-3xl p-8 text-center border border-heather-100 space-y-2">
+          <i data-lucide="file-x" class="w-8 h-8 text-oase-muted mx-auto"></i>
+          <h4 class="text-sm font-bold text-oase-plum">Tidak ada cerita ditemukan</h4>
+          <p class="text-xs text-oase-muted">Belum ada cerita siswa yang cocok dengan kriteria pencarian.</p>
+        </div>
+      `;
+    } else {
+      allStoriesListContainer.innerHTML = filtered.map(s => {
+        const author = s.author_name || s.author || 'Sahabat Anonim';
+        const content = s.content || s.story_content || '';
+        const category = s.category || s.emotion || 'Akademik';
+        const dateStr = s.created_at ? getTimeAgo(s.created_at) : 'Baru saja';
+        const hugs = s.hugs || 0;
+        const cheers = s.cheers || 0;
+
+        return `
+          <div class="p-4 sm:p-5 rounded-2xl bg-white border border-heather-100 hover:border-heather-300 shadow-2xs transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div class="space-y-2 flex-grow">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-bold text-oase-plum">${escapeHtml(author)}</span>
+                <span class="text-[10px] text-oase-muted">• ${dateStr}</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-heather-100 text-heather-800 text-[10px] font-bold border border-heather-200">
+                  ${escapeHtml(category)}
+                </span>
+                <span class="text-[10px] text-oase-muted ml-auto sm:ml-0">
+                  🤗 ${hugs} Pelukan • 💖 ${cheers} Semangat
+                </span>
+              </div>
+              <p class="text-xs sm:text-sm text-oase-plum leading-relaxed bg-oase-surface/50 p-3.5 rounded-xl border border-oase-border/40 whitespace-pre-line">
+                ${escapeHtml(content)}
+              </p>
+            </div>
+
+            <button 
+              type="button" 
+              class="delete-single-story-btn px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center gap-1.5 border border-rose-200 transition-all flex-shrink-0"
+              data-story-id="${s.id}"
+              data-author="${escapeHtml(author)}"
+              data-content="${escapeHtml(content)}"
+            >
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>Hapus Cerita</span>
+            </button>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.delete-single-story-btn').forEach(btn => {
+        btn.onclick = () => {
+          promptDeleteStory({
+            storyId: btn.dataset.storyId,
+            author: btn.dataset.author,
+            text: btn.dataset.content,
+            reason: 'Tindakan moderasi manual'
+          });
+        };
+      });
+    }
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // Modal Konfirmasi Hapus Cerita Siswa
+  function promptDeleteStory(data) {
+    if (!deleteStoryModalModerator || !deleteStoryPreviewModerator) return;
+    storyToDelete = data;
+    deleteStoryPreviewModerator.innerHTML = `
+      <div><strong>Penulis:</strong> ${escapeHtml(data.author)}</div>
+      <div class="mt-1"><strong>Isi Cerita:</strong> "${escapeHtml(data.text.slice(0, 160))}${data.text.length > 160 ? '...' : ''}"</div>
+    `;
+    deleteStoryModalModerator.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  if (cancelDeleteStoryBtnModerator) {
+    cancelDeleteStoryBtnModerator.onclick = () => {
+      storyToDelete = null;
+      if (deleteStoryModalModerator) deleteStoryModalModerator.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    };
+  }
+
+  if (confirmDeleteStoryBtnModerator) {
+    confirmDeleteStoryBtnModerator.onclick = async () => {
+      if (!storyToDelete) return;
+      const { storyId, author, text, reason } = storyToDelete;
+
+      if (window.CommunityService && typeof window.CommunityService.deleteStory === 'function') {
+        try {
+          await window.CommunityService.deleteStory(
+            storyId,
+            currentModerator ? (currentModerator.display_name || currentModerator.email) : 'Moderator OASE',
+            reason || 'Pelanggaran pedoman komunitas'
+          );
+        } catch (e) {
+          console.warn('CommunityService deleteStory error:', e);
+        }
+      }
+
+      // Catat ke Log Audit
+      addAuditLog(
+        'HAPUS_CERITA',
+        `Cerita oleh ${author} ("${text.slice(0, 30)}...")`,
+        reason || 'Pelanggaran pedoman komunitas'
+      );
+
+      if (deleteStoryModalModerator) deleteStoryModalModerator.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+      storyToDelete = null;
+
+      // Segarkan tampilan cerita & komentar
+      renderAllCommunityStories(storySearchInput ? storySearchInput.value : '');
+      renderAllCommunityComments(commentSearchInput ? commentSearchInput.value : '');
+      renderHateSpeechAlerts();
+      showToast('Cerita siswa berhasil dihapus permanen oleh Moderator! 🛡️');
+    };
+  }
+
+  // Sub-Tab Switcher (Komentar vs Cerita Siswa)
+  if (subTabCommentsBtn && subTabStoriesBtn) {
+    subTabCommentsBtn.onclick = () => {
+      subTabCommentsBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#8E3476] text-white shadow-xs flex items-center gap-1.5';
+      subTabStoriesBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-gray-600 hover:text-heather-800 flex items-center gap-1.5';
+      if (subViewComments) subViewComments.classList.remove('hidden');
+      if (subViewStories) subViewStories.classList.add('hidden');
+    };
+
+    subTabStoriesBtn.onclick = () => {
+      subTabStoriesBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#8E3476] text-white shadow-xs flex items-center gap-1.5';
+      subTabCommentsBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-gray-600 hover:text-heather-800 flex items-center gap-1.5';
+      if (subViewStories) subViewStories.classList.remove('hidden');
+      if (subViewComments) subViewComments.classList.add('hidden');
+      renderAllCommunityStories(storySearchInput ? storySearchInput.value : '');
+    };
+  }
+
+  if (storySearchInput) {
+    storySearchInput.oninput = () => {
+      renderAllCommunityStories(storySearchInput.value);
+    };
+  }
+
+  if (refreshAllStoriesBtn) {
+    refreshAllStoriesBtn.onclick = async () => {
+      if (window.CommunityService && typeof window.CommunityService.getStories === 'function') {
+        await window.CommunityService.getStories();
+      }
+      renderAllCommunityStories(storySearchInput ? storySearchInput.value : '');
+      showToast('Daftar cerita komunitas telah disegarkan.');
+    };
+  }
+
+  // ============================================================================
   // 8. FITUR 4: KOTAK LAPORAN BUG & ADUAN SISWA (MULTI-MODERATOR REAL-TIME)
   // ============================================================================
   async function renderBugReports() {
@@ -1854,8 +2041,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         await window.CommunityService.getComments();
       } catch(e) {}
     }
+    if (window.CommunityService && typeof window.CommunityService.getStories === 'function') {
+      try {
+        await window.CommunityService.getStories();
+      } catch(e) {}
+    }
     renderHateSpeechAlerts();
     renderAllCommunityComments();
+    renderAllCommunityStories();
     await renderBugReports();
     await renderSaraKeywords();
     renderAuthorizedModerators();
@@ -1900,13 +2093,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
 
-      // 3. Sinkronisasi Real-time Komentar Komunitas (Agar Peringatan SARA & Komentar Terhapus Live)
+      // 3. Sinkronisasi Real-time Komentar & Cerita Komunitas (Live Sync)
       if (window.CommunityService && typeof window.CommunityService.initRealtime === 'function') {
         window.CommunityService.initRealtime();
         window.CommunityService.onUpdate((data) => {
           if (!data) return;
           renderHateSpeechAlerts();
           renderAllCommunityComments(commentSearchInput ? commentSearchInput.value : '');
+          renderAllCommunityStories(storySearchInput ? storySearchInput.value : '');
 
           if (data.action === 'NEW_COMMENT' && data.payload) {
             const { flaggedList } = scanCommunityCommentsForHateSpeech();
@@ -1915,6 +2109,10 @@ document.addEventListener('DOMContentLoaded', async () => {
               playAlertPing();
               showToast(`⚠️ Komentar baru melanggar sensor SARA terdeteksi dari ${data.payload.author || 'pengguna'}!`);
             }
+          } else if (data.action === 'NEW_STORY') {
+            showToast('Ada cerita siswa baru dipublikasikan di Komunitas.');
+          } else if (data.action === 'DELETE_STORY') {
+            showToast('Sebuah cerita telah dihapus dari Komunitas.');
           }
         });
       }
