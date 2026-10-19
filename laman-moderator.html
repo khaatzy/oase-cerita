@@ -51,9 +51,16 @@
       }
     }
   </script>
+  <style>
+    html, body {
+      overflow-x: hidden !important;
+      max-width: 100vw !important;
+      width: 100% !important;
+    }
+  </style>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-oase-surface text-oase-plum font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-heather-200 selection:text-heather-900">
+<body class="bg-oase-surface text-oase-plum font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-heather-200 selection:text-heather-900 overflow-x-hidden w-full max-w-full">
 
   <!-- Ambient Glows -->
   <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
@@ -63,8 +70,8 @@
   </div>
 
   <!-- Header / Navigation Bar Moderator -->
-  <header class="sticky top-0 z-40 backdrop-blur-md bg-white/95 border-b border-oase-border shadow-xs">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2">
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-white/95 border-b border-oase-border shadow-xs w-full max-w-full overflow-x-clip">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-2 sm:gap-4">
       
       <!-- Brand & Moderator Title -->
       <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
@@ -77,16 +84,16 @@
                 MODERATOR
               </span>
             </div>
-            <span class="hidden sm:block text-xs text-oase-muted font-medium mt-0.5 truncate">Pemantauan Ruang Aman & Penindakan Pelanggaran</span>
+            <span class="hidden 2xl:block text-xs text-oase-muted font-medium mt-0.5 truncate">Pemantauan Ruang Aman & Penindakan Pelanggaran</span>
           </div>
         </a>
       </div>
 
       <!-- Action & Profile Bar -->
-      <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+      <div class="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
         
         <!-- Toggle Nada Alarm Audio (Desktop & Tablet) -->
-        <button id="toggleAlarmSoundBtn" class="hidden sm:inline-flex p-2.5 rounded-2xl border border-gray-200 hover:bg-heather-50 text-oase-muted hover:text-heather-700 transition-all" title="Nyalakan/Bisukan Audio Peringatan">
+        <button id="toggleAlarmSoundBtn" class="hidden sm:inline-flex p-2 sm:p-2.5 rounded-2xl border border-gray-200 hover:bg-heather-50 text-oase-muted hover:text-heather-700 transition-all" title="Nyalakan/Bisukan Audio Peringatan">
           <i id="alarmSoundIcon" data-lucide="volume-2" class="w-4 h-4 text-heather-600"></i>
         </button>
 
@@ -113,42 +120,42 @@
         </div>
 
         <!-- Profil Moderator Badge (Clean pill matching counselor dashboard) -->
-        <div class="hidden lg:flex items-center gap-2.5 bg-white border border-gray-200 px-3.5 py-1.5 rounded-full shadow-2xs">
-          <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-heather-600 to-rose-600 text-white flex items-center justify-center font-bold text-xs">
+        <div class="hidden md:flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-full shadow-2xs">
+          <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-heather-600 to-rose-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
             <i data-lucide="shield" class="w-3.5 h-3.5"></i>
           </div>
           <div class="text-left leading-tight">
-            <span id="navModName" class="text-xs font-bold text-gray-800 block truncate max-w-[130px]">Moderator</span>
-            <span id="navModRole" class="text-[10px] text-gray-500 font-medium block truncate max-w-[130px]">Otoritas Pengawas</span>
+            <span id="navModName" class="text-xs font-bold text-gray-800 block truncate max-w-[100px] lg:max-w-[130px]">Moderator</span>
+            <span id="navModRole" class="text-[9px] text-gray-500 font-medium block truncate max-w-[100px] lg:max-w-[130px]">Otoritas Pengawas</span>
           </div>
         </div>
 
-        <!-- Tombol Buka Komunitas Publik -->
-        <a href="komunitas.html" target="_blank" title="Lihat Tampilan Komunitas Publik" class="hidden xl:flex items-center gap-1.5 px-3 py-2 rounded-full border border-gray-200 hover:bg-heather-50 text-oase-muted hover:text-heather-700 text-xs font-bold transition-all">
+        <!-- Tombol Buka Komunitas Publik (Layar sangat lebar 2xl, karena ada di drawer) -->
+        <a href="komunitas.html" target="_blank" title="Lihat Tampilan Komunitas Publik" class="hidden 2xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 hover:bg-heather-50 text-oase-muted hover:text-heather-700 text-xs font-bold transition-all">
           <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
           <span>Komunitas</span>
         </a>
 
-        <!-- Tombol Kelola Moderator Resmi -->
-        <button id="openManageModsBtn" title="Kelola Akun & Tambah Moderator Resmi" class="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-heather-300 bg-white hover:bg-heather-50 text-heather-800 text-xs font-bold transition-all shadow-2xs">
+        <!-- Tombol Kelola Moderator Resmi (Layar sangat lebar 2xl, karena ada di drawer) -->
+        <button id="openManageModsBtn" title="Kelola Akun & Tambah Moderator Resmi" class="hidden 2xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-heather-300 bg-white hover:bg-heather-50 text-heather-800 text-xs font-bold transition-all shadow-2xs">
           <i data-lucide="user-plus" class="w-3.5 h-3.5 text-heather-600"></i>
           <span>Kelola Moderator</span>
         </button>
 
-        <!-- Tombol Lapor Bug -->
-        <a href="lapor-bug.html" target="_blank" title="Laporkan Kendala Sistem" class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-900 text-xs font-semibold transition-all shadow-2xs">
+        <!-- Tombol Lapor Bug (Layar lebar xl, karena ada di drawer) -->
+        <a href="lapor-bug.html" target="_blank" title="Laporkan Kendala Sistem" class="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-900 text-xs font-semibold transition-all shadow-2xs">
           <i data-lucide="bug" class="w-3.5 h-3.5 text-amber-600"></i>
           <span>Lapor Bug</span>
         </a>
 
-        <!-- Tombol Buka Pop-up Login 2 Opsi (Desktop) -->
-        <button id="openLoginModalBtn" title="Buka Pop-up Login (User Biasa / Moderator)" class="hidden md:inline-flex px-3.5 py-2 rounded-full bg-gradient-to-r from-rose-600 to-heather-600 hover:from-rose-700 hover:to-heather-700 text-white text-xs font-bold transition-all items-center gap-1.5 shadow-sm shadow-rose-500/20">
+        <!-- Tombol Buka Pop-up Login (Hanya jika belum login) -->
+        <button id="openLoginModalBtn" title="Buka Pop-up Login (User Biasa / Moderator)" class="hidden px-3.5 py-1.5 rounded-full bg-gradient-to-r from-rose-600 to-heather-600 hover:from-rose-700 hover:to-heather-700 text-white text-xs font-bold transition-all items-center gap-1.5 shadow-sm shadow-rose-500/20">
           <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
-          <span>Login / Masuk</span>
+          <span>Login</span>
         </button>
 
         <!-- Tombol Keluar (Desktop) -->
-        <button id="logoutBtn" title="Keluar dari Sesi Moderator" class="hidden md:inline-flex px-4 py-2 rounded-full border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-bold transition-all items-center gap-1.5">
+        <button id="logoutBtn" title="Keluar dari Sesi Moderator" class="hidden lg:inline-flex px-3.5 py-1.5 rounded-full border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-bold transition-all items-center gap-1.5">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
           <span>Keluar</span>
         </button>

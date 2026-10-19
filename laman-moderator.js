@@ -522,6 +522,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (navModName) navModName.textContent = cleanName;
     if (navModRole) navModRole.textContent = 'Otoritas Pengawas OASE';
 
+    // Toggle tombol navbar saat terotentikasi
+    if (openLoginModalBtn) openLoginModalBtn.classList.add('hidden');
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
+
     // Update elemen pada Drawer Hamburger
     const modInitialLabel = document.getElementById('modInitialLabel');
     const modNameLabel = document.getElementById('modNameLabel');

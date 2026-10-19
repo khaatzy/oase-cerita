@@ -1,5 +1,12 @@
 /* Custom Styling for OASE Cerita - High Contrast & Accessibility */
 
+/* Global Viewport Overflow Protection */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
 :root {
   --heather-mauve: #A14189;
   --heather-mauve-light: #C78CBB;
