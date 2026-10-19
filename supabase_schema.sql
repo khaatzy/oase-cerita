@@ -122,6 +122,28 @@ CREATE POLICY "Pengguna dapat mendaftarkan profil awal"
 ON public.profiles FOR INSERT 
 WITH CHECK (true);
 
+-- Otomatis buatkan baris di public.profiles setiap kali ada user baru dibuat di auth.users:
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (auth_user_id, email, full_name, role)
+    VALUES (
+        new.id,
+        new.email,
+        COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+        COALESCE(new.raw_user_meta_data->>'role', 'user')
+    )
+    ON CONFLICT (email) DO UPDATE
+    SET auth_user_id = new.id;
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 -- ========================================================
 -- 6. Tabel Sesi Konseling Booking (counseling_sessions)
 -- ========================================================
