@@ -198,6 +198,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ============================================================================
   // 4. AUTENTIKASI SUPABASE & DUAL-OPTION ROLE LOGIN
   // ============================================================================
+  // Helper untuk mendapatkan nama sapaan moderator yang paling akurat & tersimpan
+  function getResolvedModName(email, profile = null) {
+    if (!email) return 'Moderator OASE';
+    const emailKey = email.toLowerCase().trim();
+    const custom = localStorage.getItem('oase_mod_custom_name_' + emailKey);
+    if (custom && custom.trim()) return custom.trim();
+
+    if (window.AuthService && typeof window.AuthService.getModeratorCredentialsMap === 'function') {
+      const cMap = window.AuthService.getModeratorCredentialsMap();
+      if (cMap[emailKey] && (cMap[emailKey].display_name || cMap[emailKey].displayName)) {
+        return (cMap[emailKey].display_name || cMap[emailKey].displayName).trim();
+      }
+    }
+
+    if (profile) {
+      const pName = profile.display_name || profile.full_name || '';
+      if (pName && pName !== 'Sahabat OASE' && !pName.includes('@')) return pName.trim();
+    }
+
+    return email.split('@')[0];
+  }
+
+  // ============================================================================
   async function checkAuth() {
     // Cek apakah ada sesi moderator tersimpan
     const savedModEmail = localStorage.getItem('oase_active_moderator_email');
@@ -229,7 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentModerator = {
           id: session.user.id,
           email: email,
-          display_name: profile.display_name || 'Moderator OASE',
+          display_name: getResolvedModName(email, profile),
           role: 'moderator'
         };
         localStorage.setItem('oase_active_moderator_email', email);
@@ -248,7 +271,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentModerator = {
           id: 'local-mod-' + savedModEmail,
           email: savedModEmail,
-          display_name: 'Moderator OASE',
+          display_name: getResolvedModName(savedModEmail, null),
           role: 'moderator'
         };
         initDashboard();
@@ -402,7 +425,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           currentModerator = {
             id: 'mod-' + Date.now(),
             email: email,
-            display_name: profile && profile.display_name ? profile.display_name : email.split('@')[0],
+            display_name: getResolvedModName(email, profile),
             role: 'moderator'
           };
 
@@ -464,13 +487,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ============================================================================
   function getActiveModDisplayName() {
     if (!currentModerator) return 'Moderator';
-    const saved = localStorage.getItem('oase_mod_custom_name_' + currentModerator.email);
-    if (saved && saved.trim()) return saved.trim();
-    let clean = currentModerator.display_name || '';
-    if (!clean || clean.includes('@')) {
-      clean = currentModerator.email ? currentModerator.email.split('@')[0] : 'Moderator';
-    }
-    return clean;
+    return getResolvedModName(currentModerator.email, currentModerator);
   }
 
   function setupWarmGreeting() {
@@ -1379,13 +1396,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (toggleModPasswordVisibilityBtn && newModPasswordInput) {
     toggleModPasswordVisibilityBtn.onclick = () => {
-      if (newModPasswordInput.type === 'password') {
-        newModPasswordInput.type = 'text';
-        if (modPasswordEyeIcon) modPasswordEyeIcon.setAttribute('data-lucide', 'eye-off');
-      } else {
-        newModPasswordInput.type = 'password';
-        if (modPasswordEyeIcon) modPasswordEyeIcon.setAttribute('data-lucide', 'eye');
-      }
+      const isPassword = newModPasswordInput.type === 'password';
+      newModPasswordInput.type = isPassword ? 'text' : 'password';
+      toggleModPasswordVisibilityBtn.innerHTML = isPassword
+        ? '<i data-lucide="eye-off" class="w-4 h-4 text-rose-600"></i>'
+        : '<i data-lucide="eye" class="w-4 h-4 text-gray-400"></i>';
       if (window.lucide) lucide.createIcons();
     };
   }
@@ -1408,7 +1423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     authorizedModsList.innerHTML = allMods.map(email => {
       const isDefault = defaultMods.some(dm => dm.toLowerCase() === email.toLowerCase());
       const cred = credMap[email.toLowerCase()];
-      const modDisplayName = cred && cred.displayName ? cred.displayName : '';
+      const modDisplayName = getResolvedModName(email, cred);
       const password = cred && cred.password ? cred.password : (isDefault ? 'default123' : '');
 
       return `

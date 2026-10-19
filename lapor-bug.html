@@ -70,8 +70,16 @@
         </a>
       </div>
 
-      <!-- User Info & Tombol Kembali ke Beranda -->
+      <!-- User Info & Tombol Cek Tiket & Kembali ke Beranda -->
       <div class="flex items-center gap-2">
+        <!-- Tombol Cek Status & Riwayat Tiket Bug -->
+        <button type="button" id="openCheckTicketModalBtn" class="px-3 sm:px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs" title="Cek Status Tiket & Riwayat Laporan Bug">
+          <i data-lucide="ticket" class="w-4 h-4 text-amber-600"></i>
+          <span class="hidden sm:inline">Cek Status & Riwayat</span>
+          <span class="sm:hidden">Status</span>
+          <span id="headerTicketCountBadge" class="hidden px-1.5 py-0.5 rounded-full bg-amber-600 text-white text-[10px] font-black">0</span>
+        </button>
+
         <div id="authUserInfoBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-950">
           <i data-lucide="user-check" class="w-3.5 h-3.5 text-amber-600"></i>
           <span id="authUserNameSpan" class="truncate max-w-[150px]">Memeriksa...</span>
@@ -92,10 +100,17 @@
   <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex-grow w-full space-y-8">
     
     <!-- Hero Banner Card -->
-    <div class="bg-gradient-to-r from-amber-50 via-white to-heather-50 p-6 sm:p-8 rounded-3xl border border-amber-200 shadow-sm space-y-2 text-center sm:text-left">
-      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-extrabold">
-        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
-        <span>Bantu Kami Menyempurnakan OASE Cerita</span>
+    <div class="bg-gradient-to-r from-amber-50 via-white to-heather-50 p-6 sm:p-8 rounded-3xl border border-amber-200 shadow-sm space-y-3 text-center sm:text-left">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-extrabold">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
+          <span>Bantu Kami Menyempurnakan OASE Cerita</span>
+        </div>
+        <!-- Tombol Hero Cek Tiket -->
+        <button type="button" id="heroCheckTicketBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white hover:bg-amber-50 text-amber-900 border border-amber-300 text-xs font-bold shadow-2xs transition-all">
+          <i data-lucide="ticket" class="w-3.5 h-3.5 text-amber-600"></i>
+          <span id="heroTicketStatusBadge">Cek Status & Riwayat</span>
+        </button>
       </div>
       <h1 class="text-2xl sm:text-3xl font-extrabold text-oase-plum tracking-tight">
         Formulir Laporan Bug & Kendala Teknis
@@ -290,20 +305,140 @@
 
       <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-1">
         <span class="text-[10px] uppercase font-bold text-amber-800 tracking-wider block">ID Tiket Laporan Anda:</span>
-        <span id="ticketResultId" class="text-xl font-mono font-black text-amber-950 block">BUG-0000</span>
+        <span id="ticketResultId" class="text-2xl font-mono font-black text-amber-950 block">BUG-0000</span>
+        <p class="text-[11px] text-amber-800/80">Simpan kode ini untuk memantau perkembangan perbaikan.</p>
       </div>
 
-      <div class="grid grid-cols-2 gap-2.5 pt-2">
-        <button id="closeSuccessModalBtn" type="button" class="py-2.5 rounded-xl border border-oase-border hover:bg-slate-50 text-xs font-bold text-oase-muted transition-all">
-          Tutup
+      <div class="space-y-2 pt-1">
+        <button id="viewMyTicketNowBtn" type="button" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 to-heather-700 hover:from-amber-700 hover:to-heather-800 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all">
+          <i data-lucide="ticket" class="w-4 h-4"></i>
+          <span>Pantau Status Tiket Ini Langsung</span>
         </button>
-        <a href="dashboard-awal.html" class="py-2.5 rounded-xl bg-heather-600 hover:bg-heather-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all">
-          <i data-lucide="home" class="w-3.5 h-3.5"></i>
-          <span>Ke Beranda</span>
-        </a>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="closeSuccessModalBtn" type="button" class="py-2.5 rounded-xl border border-oase-border hover:bg-slate-50 text-xs font-bold text-oase-muted transition-all">
+            Tutup
+          </button>
+          <a href="dashboard-awal.html" class="py-2.5 rounded-xl bg-heather-600 hover:bg-heather-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all">
+            <i data-lucide="home" class="w-3.5 h-3.5"></i>
+            <span>Ke Beranda</span>
+          </a>
+        </div>
       </div>
     </div>
-  <!-- MODAL LOGIN DUA OPSI (USER BIASA VS MODERATOR) -->
+  </div>
+
+  <!-- MODAL PELACAKAN STATUS & RIWAYAT BUG -->
+  <div id="checkBugTicketModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md hidden animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col border border-heather-200 shadow-2xl relative overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-amber-50/80 via-white to-heather-50/60">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 shadow-2xs">
+            <i data-lucide="ticket" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base sm:text-lg font-extrabold text-oase-plum leading-tight">Status & Riwayat Laporan Bug</h3>
+            <p class="text-xs text-oase-muted">Pantau progres penanganan kendala sistem secara real-time</p>
+          </div>
+        </div>
+        <button type="button" id="closeCheckTicketModalBtn" class="text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100 transition-colors" title="Tutup">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Navigation Tabs: Tab 1 (Cari Tiket) & Tab 2 (Riwayat Saya) -->
+      <div class="p-3 bg-gray-50/80 border-b border-gray-100 grid grid-cols-2 gap-2">
+        <button type="button" id="trackerTabSearchBtn" class="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-white text-amber-900 shadow-2xs border border-amber-200">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-amber-600"></i>
+          <span>Cek Kode Tiket</span>
+        </button>
+        <button type="button" id="trackerTabHistoryBtn" class="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 text-gray-600 hover:text-amber-900">
+          <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+          <span>Riwayat Laporan Saya</span>
+          <span id="trackerMyHistoryCountBadge" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold">0</span>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
+        
+        <!-- PANEL 1: CARI KODE TIKET -->
+        <div id="trackerSearchPanel" class="space-y-4">
+          <form id="trackerSearchForm" class="space-y-2">
+            <label class="block text-xs font-bold text-oase-plum uppercase tracking-wider">
+              Masukkan Kode Tiket Laporan Anda
+            </label>
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <i data-lucide="hash" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input 
+                  type="text" 
+                  id="trackerSearchInput" 
+                  placeholder="Contoh: BUG-1234" 
+                  class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-oase-border text-xs sm:text-sm uppercase font-mono tracking-wider focus:outline-none focus:border-amber-500 bg-white"
+                  required
+                />
+              </div>
+              <button 
+                type="submit" 
+                id="trackerSearchSubmitBtn" 
+                class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-heather-700 hover:from-amber-700 hover:to-heather-800 text-white font-bold text-xs shadow-2xs transition-all flex items-center gap-1.5 flex-shrink-0"
+              >
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                <span>Cek Status</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-gray-500 flex items-center gap-1">
+              <i data-lucide="info" class="w-3.5 h-3.5 text-amber-600 flex-shrink-0"></i>
+              <span>Kode tiket diperoleh otomatis saat mengirimkan formulir laporan kendala.</span>
+            </p>
+          </form>
+
+          <!-- Result Card Container -->
+          <div id="trackerSearchResultContainer">
+            <!-- Default Placeholder / Empty State -->
+            <div id="trackerSearchEmptyPlaceholder" class="p-6 rounded-2xl border-2 border-dashed border-gray-200 text-center space-y-2 bg-gray-50/50">
+              <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+                <i data-lucide="ticket" class="w-5 h-5"></i>
+              </div>
+              <p class="text-xs font-semibold text-gray-600">Ketik kode tiket di atas untuk memeriksa status penanganan kendala</p>
+              <p class="text-[11px] text-gray-400">Status akan langsung terupdate secara real-time saat tim moderator bekerja</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 2: RIWAYAT LAPORAN SAYA -->
+        <div id="trackerHistoryPanel" class="hidden space-y-3">
+          <div class="flex items-center justify-between pb-1">
+            <span class="text-xs font-bold text-oase-plum uppercase tracking-wider">Daftar Laporan Anda</span>
+            <button type="button" id="refreshTrackerHistoryBtn" class="text-[11px] text-amber-700 hover:text-amber-900 font-bold flex items-center gap-1 transition-colors">
+              <i data-lucide="rotate-cw" class="w-3 h-3"></i>
+              <span>Segarkan</span>
+            </button>
+          </div>
+
+          <div id="trackerHistoryList" class="space-y-2.5">
+            <!-- Dynamic items rendered by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+        <div class="flex items-center gap-1.5 text-emerald-700 font-semibold">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Sinkronisasi Real-Time Aktif</span>
+        </div>
+        <button type="button" id="closeCheckTicketFooterBtn" class="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-white text-gray-600 font-bold text-xs transition-all">
+          Tutup
+        </button>
+      </div>
+
+    </div>
+  </div>
   <div id="bugAuthModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md hidden animate-fadeIn">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-heather-200 shadow-2xl relative transform transition-all space-y-5">
       

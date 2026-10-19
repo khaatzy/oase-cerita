@@ -394,6 +394,11 @@ const AuthService = {
 
   // Dapatkan Profil & Role Pengguna (User, Moderator, Konselor)
   async getUserProfile(userId, email) {
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
+    const customModName = cleanEmail ? (localStorage.getItem('oase_mod_custom_name_' + cleanEmail) || '') : '';
+    const modCreds = this.getModeratorCredentialsMap();
+    const credName = cleanEmail && modCreds[cleanEmail] ? (modCreds[cleanEmail].display_name || modCreds[cleanEmail].displayName || '') : '';
+
     if (supabaseClient && userId) {
       try {
         const { data, error } = await supabaseClient
@@ -402,31 +407,34 @@ const AuthService = {
           .eq('auth_user_id', userId)
           .single();
         if (!error && data) {
-          const safeName = data.display_name || data.full_name || 'Sahabat OASE';
+          const rawName = data.display_name || data.full_name || '';
+          const safeName = customModName || credName || (rawName && !rawName.includes('@') ? rawName : (cleanEmail ? cleanEmail.split('@')[0] : 'Sahabat OASE'));
           return {
             ...data,
-            display_name: safeName.includes('@') ? 'Sahabat OASE' : safeName,
-            full_name: safeName.includes('@') ? 'Sahabat OASE' : safeName
+            display_name: safeName,
+            full_name: safeName
           };
         }
       } catch(e) {}
     }
     const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
-    if (email && savedProfiles[email]) {
-      const profile = savedProfiles[email];
-      const safeName = profile.display_name || profile.full_name || 'Sahabat OASE';
+    if (cleanEmail && savedProfiles[cleanEmail]) {
+      const profile = savedProfiles[cleanEmail];
+      const rawName = profile.display_name || profile.full_name || '';
+      const safeName = customModName || credName || (rawName && !rawName.includes('@') ? rawName : cleanEmail.split('@')[0]);
       return {
         ...profile,
-        display_name: safeName.includes('@') ? 'Sahabat OASE' : safeName,
-        full_name: safeName.includes('@') ? 'Sahabat OASE' : safeName
+        display_name: safeName,
+        full_name: safeName
       };
     }
+    const finalName = customModName || credName || (cleanEmail ? cleanEmail.split('@')[0] : 'Sahabat OASE');
     return {
-      email: email || 'siswa@oase.id',
+      email: cleanEmail || 'siswa@oase.id',
       role: 'user',
       moderator_approval_status: 'none',
-      display_name: 'Sahabat OASE',
-      full_name: 'Sahabat OASE'
+      display_name: finalName,
+      full_name: finalName
     };
   },
 
@@ -502,7 +510,22 @@ const AuthService = {
   // Ambil peta seluruh kredensial akun moderator (untuk manajemen & copy akun)
   getModeratorCredentialsMap() {
     try {
-      return JSON.parse(localStorage.getItem('oase_moderator_credentials') || '{}');
+      const creds = JSON.parse(localStorage.getItem('oase_moderator_credentials') || '{}');
+      // Normalisasi agar setiap entri memiliki display_name & displayName
+      Object.keys(creds).forEach(em => {
+        const item = creds[em];
+        if (item) {
+          const name = item.display_name || item.displayName || '';
+          if (name) {
+            item.display_name = name;
+            item.displayName = name;
+            if (!localStorage.getItem('oase_mod_custom_name_' + em)) {
+              localStorage.setItem('oase_mod_custom_name_' + em, name);
+            }
+          }
+        }
+      });
+      return creds;
     } catch(e) {
       return {};
     }
@@ -523,6 +546,9 @@ const AuthService = {
     }
 
     const cleanName = (displayName || '').trim() || cleanEmail.split('@')[0];
+
+    // Simpan custom display name langsung ke localStorage spesifik
+    localStorage.setItem('oase_mod_custom_name_' + cleanEmail, cleanName);
 
     // 1. Coba daftarkan akun baru ke Supabase Auth
     let authUser = null;
@@ -565,6 +591,7 @@ const AuthService = {
       email: cleanEmail,
       password: password,
       display_name: cleanName,
+      displayName: cleanName,
       added_by: addedBy,
       added_at: new Date().toISOString()
     };
