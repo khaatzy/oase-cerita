@@ -182,30 +182,40 @@
       const toggleBtn = document.getElementById('togglePushNotifBtn');
       const statusBadge = document.getElementById('pushNotifStatusBadge');
       const btnLabel = document.getElementById('pushNotifBtnLabel');
-      if (!toggleBtn) return;
+      const drawerBtn = document.getElementById('drawerTogglePushNotifBtn');
+      const drawerBadge = document.getElementById('drawerPushNotifStatusBadge');
+      const drawerLabel = document.getElementById('drawerPushNotifLabel');
 
       const updateBtnStatus = () => {
         if (!window.NotificationService || !window.NotificationService.isSupported()) {
           if (btnLabel) btnLabel.textContent = 'Notifikasi T/A';
           if (statusBadge) statusBadge.className = 'w-2 h-2 rounded-full bg-gray-400';
+          if (drawerLabel) drawerLabel.textContent = 'Tidak didukung browser';
+          if (drawerBadge) drawerBadge.className = 'w-2.5 h-2.5 rounded-full bg-gray-400';
           return;
         }
         const perm = window.NotificationService.getPermissionStatus();
         if (perm === 'granted') {
           if (btnLabel) btnLabel.textContent = 'Notifikasi Aktif';
           if (statusBadge) statusBadge.className = 'w-2 h-2 rounded-full bg-emerald-500 shadow-xs';
+          if (drawerLabel) drawerLabel.textContent = 'Notifikasi Aktif (Siaga)';
+          if (drawerBadge) drawerBadge.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs';
         } else if (perm === 'denied') {
           if (btnLabel) btnLabel.textContent = 'Notifikasi Diblokir';
           if (statusBadge) statusBadge.className = 'w-2 h-2 rounded-full bg-rose-500';
+          if (drawerLabel) drawerLabel.textContent = 'Izin diblokir di browser';
+          if (drawerBadge) drawerBadge.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
         } else {
           if (btnLabel) btnLabel.textContent = 'Push Notifikasi';
           if (statusBadge) statusBadge.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+          if (drawerLabel) drawerLabel.textContent = 'Tekan untuk aktivasi';
+          if (drawerBadge) drawerBadge.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
         }
       };
 
       updateBtnStatus();
 
-      toggleBtn.addEventListener('click', async () => {
+      const handleToggle = async () => {
         if (!window.NotificationService || !window.NotificationService.isSupported()) {
           alert('Browser atau perangkat ini belum mendukung fitur Push Notifikasi.');
           return;
@@ -224,7 +234,10 @@
         } catch (e) {
           alert('Gagal mengaktifkan notifikasi: ' + e.message);
         }
-      });
+      };
+
+      if (toggleBtn) toggleBtn.addEventListener('click', handleToggle);
+      if (drawerBtn) drawerBtn.addEventListener('click', handleToggle);
     }
 
     // 2. HAMBURGER DRAWER HANDLERS

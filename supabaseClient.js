@@ -1778,15 +1778,55 @@ const CommunityService = {
       } catch(e) {}
     }
 
-    // 2. Supabase Realtime Broadcast Room untuk sinkronisasi antar perangkat/pengguna
+    // 2. Supabase Realtime Broadcast Room & Postgres Changes
     if (supabaseClient && typeof supabaseClient.channel === 'function') {
       try {
         this._channel = supabaseClient.channel('oase_community_room', {
           config: { broadcast: { self: false } }
         });
+
+        // Dengarkan broadcast real-time
         this._channel.on('broadcast', { event: 'community_update' }, ({ payload }) => {
           this._handleIncomingUpdate(payload);
-        }).subscribe();
+        });
+
+        // Dengarkan perubahan langsung pada tabel stories (INSERT & UPDATE)
+        try {
+          this._channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stories' }, (payload) => {
+            const row = payload.new;
+            if (!row) return;
+            if (row.emotion_tag && row.emotion_tag.startsWith('COMMENT:')) {
+              const sId = row.emotion_tag.replace('COMMENT:', '');
+              this._handleIncomingUpdate({
+                action: 'NEW_COMMENT',
+                payload: {
+                  id: row.id,
+                  story_id: sId,
+                  author: row.author_name || 'Sahabat OASE',
+                  content: row.content,
+                  created_at: row.created_at
+                }
+              });
+            } else if (row.emotion_tag !== 'DELETED_COMMENT') {
+              this._handleIncomingUpdate({
+                action: 'NEW_STORY',
+                payload: {
+                  id: row.id,
+                  author_name: row.author_name || 'Sahabat Anonim',
+                  category: row.emotion_tag || 'Akademik',
+                  emotion: row.emotion_tag || 'Berbagi Cerita',
+                  story_content: row.content,
+                  content: row.content,
+                  hugs: row.hug_count || 0,
+                  cheers: 0,
+                  created_at: row.created_at
+                }
+              });
+            }
+          });
+        } catch(e) {}
+
+        this._channel.subscribe();
       } catch(e) {}
     }
   },
@@ -1841,6 +1881,11 @@ const CommunityService = {
       if (comments[storyId]) {
         comments[storyId] = comments[storyId].filter(c => c.id !== commentId);
         localStorage.setItem('oase_community_comments', JSON.stringify(comments));
+      } else {
+        Object.keys(comments).forEach(sid => {
+          comments[sid] = comments[sid].filter(c => c.id !== commentId);
+        });
+        localStorage.setItem('oase_community_comments', JSON.stringify(comments));
       }
     } else if (data.action === 'REACTION' && data.payload) {
       const { storyId, type, count } = data.payload;
@@ -1876,6 +1921,33 @@ const CommunityService = {
     let list = [];
     if (supabaseClient) {
       try {
+        // Ambil dari tabel public.stories yang sudah aktif di Supabase
+        const { data, error } = await supabaseClient
+          .from('stories')
+          .select('*')
+          .not('emotion_tag', 'ilike', 'COMMENT:%')
+          .not('emotion_tag', 'eq', 'DELETED_COMMENT')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          list = data.map(row => ({
+            id: row.id,
+            author_name: row.author_name || 'Sahabat Anonim',
+            category: (row.emotion_tag && !row.emotion_tag.startsWith('COMMENT:')) ? row.emotion_tag : 'Akademik',
+            emotion: row.emotion_tag || 'Berbagi Cerita',
+            story_content: row.content,
+            content: row.content,
+            hugs: row.hug_count || 0,
+            cheers: 0,
+            created_at: row.created_at
+          }));
+          localStorage.setItem('oase_community_stories', JSON.stringify(list));
+          return list;
+        }
+      } catch(e) {}
+
+      // Cadangan: Coba dari public.community_stories jika tabel terpisah ada
+      try {
         const { data, error } = await supabaseClient
           .from('community_stories')
           .select('*')
@@ -1894,12 +1966,16 @@ const CommunityService = {
 
   async createStory({ authorName, category, emotion, content }) {
     if (!content || !content.trim()) throw new Error('Isi cerita tidak boleh kosong.');
-    const newStory = {
+    const cleanAuthor = authorName && authorName.trim() ? authorName.trim() : `Sahabat Anonim #${Math.floor(100 + Math.random() * 900)}`;
+    const cleanCategory = category || emotion || 'Akademik';
+
+    let newStory = {
       id: 'story-kom-' + Date.now(),
-      author_name: authorName && authorName.trim() ? authorName.trim() : 'Sahabat Anonim',
-      category: category || 'Akademik',
-      emotion: emotion || 'Berbagi Cerita',
+      author_name: cleanAuthor,
+      category: cleanCategory,
+      emotion: cleanCategory,
       story_content: content.trim(),
+      content: content.trim(),
       hugs: 0,
       cheers: 0,
       created_at: new Date().toISOString()
@@ -1907,7 +1983,39 @@ const CommunityService = {
 
     if (supabaseClient) {
       try {
-        await supabaseClient.from('community_stories').insert([newStory]);
+        // Simpan langsung ke public.stories yang ada di Supabase
+        const { data, error } = await supabaseClient
+          .from('stories')
+          .insert([
+            {
+              author_name: cleanAuthor,
+              emotion_tag: cleanCategory,
+              content: content.trim(),
+              hug_count: 0,
+              is_anonymous: true
+            }
+          ])
+          .select();
+
+        if (!error && data && data[0]) {
+          newStory.id = data[0].id;
+          newStory.created_at = data[0].created_at;
+        }
+      } catch(e) {
+        console.warn('Supabase stories insert:', e.message);
+      }
+
+      // Cadangan coba juga ke community_stories
+      try {
+        await supabaseClient.from('community_stories').insert([{
+          id: newStory.id,
+          author_name: cleanAuthor,
+          category: cleanCategory,
+          emotion: cleanCategory,
+          story_content: content.trim(),
+          hugs: 0,
+          cheers: 0
+        }]);
       } catch(e) {}
     }
 
@@ -1922,6 +2030,45 @@ const CommunityService = {
   async getComments() {
     let commentsObj = this.getStoredCommentsSync();
     if (supabaseClient) {
+      try {
+        // Ambil komentar dari public.stories (emotion_tag: COMMENT:<storyId>)
+        const { data, error } = await supabaseClient
+          .from('stories')
+          .select('*')
+          .like('emotion_tag', 'COMMENT:%')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          const map = {};
+          data.forEach(item => {
+            if (item.content && !item.content.startsWith('[Dihapus')) {
+              const sId = item.emotion_tag.replace('COMMENT:', '');
+              if (!map[sId]) map[sId] = [];
+              map[sId].push({
+                id: item.id,
+                author: item.author_name || 'Sahabat OASE',
+                content: item.content,
+                created_at: item.created_at
+              });
+            }
+          });
+
+          // Gabungkan dengan komentar lokal jika ada
+          Object.keys(commentsObj).forEach(sid => {
+            if (!map[sid]) map[sid] = [];
+            commentsObj[sid].forEach(lc => {
+              if (!map[sid].some(mc => mc.id === lc.id)) {
+                map[sid].push(lc);
+              }
+            });
+          });
+          commentsObj = map;
+          localStorage.setItem('oase_community_comments', JSON.stringify(commentsObj));
+          return commentsObj;
+        }
+      } catch(e) {}
+
+      // Cadangan: Coba dari public.community_comments jika ada
       try {
         const { data, error } = await supabaseClient
           .from('community_comments')
@@ -1938,7 +2085,6 @@ const CommunityService = {
               created_at: item.created_at
             });
           });
-          // Gabungkan dengan komentar lokal jika ada
           Object.keys(commentsObj).forEach(sid => {
             if (!map[sid]) map[sid] = [];
             commentsObj[sid].forEach(lc => {
@@ -1957,17 +2103,47 @@ const CommunityService = {
 
   async addComment({ storyId, author, content }) {
     if (!content || !content.trim()) throw new Error('Isi komentar tidak boleh kosong.');
-    const newComment = {
+    const cleanAuthor = author && author.trim() ? author.trim() : 'Sahabat OASE';
+    let newComment = {
       id: 'c-' + Date.now(),
       story_id: storyId,
-      author: author && author.trim() ? author.trim() : 'Sahabat OASE',
+      author: cleanAuthor,
       content: content.trim(),
       created_at: new Date().toISOString()
     };
 
     if (supabaseClient) {
       try {
-        await supabaseClient.from('community_comments').insert([newComment]);
+        // Simpan komentar ke public.stories dengan tag COMMENT:<storyId>
+        const { data, error } = await supabaseClient
+          .from('stories')
+          .insert([
+            {
+              author_name: cleanAuthor,
+              emotion_tag: 'COMMENT:' + storyId,
+              content: content.trim(),
+              hug_count: 0,
+              is_anonymous: true
+            }
+          ])
+          .select();
+
+        if (!error && data && data[0]) {
+          newComment.id = data[0].id;
+          newComment.created_at = data[0].created_at;
+        }
+      } catch(e) {
+        console.warn('Supabase comment insert:', e.message);
+      }
+
+      // Cadangan ke community_comments
+      try {
+        await supabaseClient.from('community_comments').insert([{
+          id: newComment.id,
+          story_id: storyId,
+          author: cleanAuthor,
+          content: content.trim()
+        }]);
       } catch(e) {}
     }
 
@@ -1998,6 +2174,18 @@ const CommunityService = {
     }
 
     if (supabaseClient && commentId) {
+      // Tandai komentar dihapus pada public.stories
+      try {
+        await supabaseClient
+          .from('stories')
+          .update({
+            emotion_tag: 'DELETED_COMMENT',
+            content: '[Komentar ini telah dihapus oleh Moderator]'
+          })
+          .eq('id', commentId);
+      } catch(e) {}
+
+      // Cadangan hapus dari community_comments jika ada
       try {
         await supabaseClient.from('community_comments').delete().eq('id', commentId);
       } catch(e) {}
@@ -2008,7 +2196,6 @@ const CommunityService = {
       comments[storyId] = comments[storyId].filter(c => c.id !== commentId);
       localStorage.setItem('oase_community_comments', JSON.stringify(comments));
     } else {
-      // Jika storyId tidak diberikan, cari dan hapus dari seluruh stories
       Object.keys(comments).forEach(sid => {
         comments[sid] = comments[sid].filter(c => c.id !== commentId);
       });
@@ -2029,7 +2216,10 @@ const CommunityService = {
       localStorage.setItem('oase_community_stories', JSON.stringify(stories));
     }
 
-    if (supabaseClient) {
+    if (supabaseClient && storyId) {
+      try {
+        await supabaseClient.from('stories').update({ hug_count: newCount }).eq('id', storyId);
+      } catch(e) {}
       try {
         await supabaseClient.from('community_stories').update({ [type]: newCount }).eq('id', storyId);
       } catch(e) {}

@@ -85,18 +85,19 @@
         </div>
 
         <!-- Right Action Buttons -->
-        <div class="flex items-center gap-2 sm:gap-3">
-          <a href="lapor-bug.html" class="px-2.5 sm:px-3 py-2 rounded-xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs" title="Laporkan Bug atau Masalah">
+        <div class="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+          <a href="lapor-bug.html" class="hidden sm:inline-flex px-2.5 sm:px-3 py-2 rounded-xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 font-bold text-xs items-center gap-1.5 transition-all shadow-2xs" title="Laporkan Bug atau Masalah">
             <i data-lucide="bug" class="w-3.5 h-3.5 text-amber-600"></i>
             <span class="hidden sm:inline">Lapor Bug</span>
           </a>
-          <button id="openNewStoryModalBtn" type="button" class="px-4 py-2 rounded-xl bg-heather-500 hover:bg-heather-600 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition-all">
-            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-            <span>Bagikan Cerita</span>
+          <button id="openNewStoryModalBtn" type="button" class="px-3 py-2 sm:px-4 sm:py-2 rounded-xl bg-heather-500 hover:bg-heather-600 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+            <span class="hidden sm:inline">Bagikan Cerita</span>
+            <span class="sm:hidden">Cerita</span>
           </button>
-          <a href="dashboard-awal.html" class="px-3.5 py-2 rounded-xl border border-heather-200 hover:bg-heather-50 text-oase-plum font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-all">
-            <i data-lucide="arrow-left" class="w-4 h-4 text-heather-600"></i>
-            <span>Beranda</span>
+          <a href="dashboard-awal.html" class="px-2.5 py-2 sm:px-3.5 sm:py-2 rounded-xl border border-heather-200 hover:bg-heather-50 text-oase-plum font-semibold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 transition-all whitespace-nowrap" title="Kembali ke Beranda Awal">
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-heather-600"></i>
+            <span class="hidden sm:inline">Beranda</span>
           </a>
         </div>
 

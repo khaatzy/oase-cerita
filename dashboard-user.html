@@ -60,22 +60,22 @@
       </div>
 
       <!-- Right Header Actions (Cek Tiket, Notifikasi Push, Lonceng, & Hamburger Menu) -->
-      <div class="flex items-center gap-2 sm:gap-3">
+      <div class="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
 
         <!-- Tombol Lapor Bug -->
-        <a href="lapor-bug.html" class="px-2.5 sm:px-3 py-2 rounded-2xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs" title="Laporkan Bug atau Kendala Sistem">
+        <a href="lapor-bug.html" class="hidden sm:inline-flex px-2.5 sm:px-3 py-2 rounded-2xl border border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-900 text-[11px] sm:text-xs font-bold transition-all items-center gap-1.5 shadow-2xs" title="Laporkan Bug atau Kendala Sistem">
           <i data-lucide="bug" class="w-3.5 h-3.5 text-amber-600"></i>
           <span class="hidden xl:inline">Lapor Bug</span>
         </a>
 
         <!-- Tombol Cek Balasan Konselor (Tiket) -->
-        <button id="navCheckTicketBtn" class="px-2.5 sm:px-3.5 py-2 rounded-2xl border-2 border-rose-300 bg-rose-50/80 hover:bg-rose-100 text-rose-800 text-[11px] sm:text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-sm" title="Cek Balasan dari Konselor">
+        <button id="navCheckTicketBtn" class="hidden sm:inline-flex px-2.5 sm:px-3.5 py-2 rounded-2xl border-2 border-rose-300 bg-rose-50/80 hover:bg-rose-100 text-rose-800 text-[11px] sm:text-xs font-extrabold transition-all items-center gap-1.5 shadow-sm" title="Cek Balasan dari Konselor">
           <i data-lucide="ticket" class="w-3.5 h-3.5 text-rose-600"></i>
           <span class="hidden md:inline">Cek Balasan Konselor</span>
         </button>
 
         <!-- Tombol Aktifkan Notifikasi Desktop & HP -->
-        <button id="togglePushNotifBtn" class="px-2.5 sm:px-3.5 py-2 rounded-2xl border-2 border-heather-300 bg-white hover:bg-heather-50 text-heather-900 text-[11px] sm:text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-sm">
+        <button id="togglePushNotifBtn" class="hidden md:inline-flex px-2.5 sm:px-3.5 py-2 rounded-2xl border-2 border-heather-300 bg-white hover:bg-heather-50 text-heather-900 text-[11px] sm:text-xs font-extrabold transition-all items-center gap-1.5 shadow-sm">
           <i data-lucide="bell-ring" class="w-3.5 h-3.5 text-heather-600"></i>
           <span id="pushNotifBtnLabel" class="hidden sm:inline">Push Notifikasi</span>
           <span id="pushNotifStatusBadge" class="w-2 h-2 rounded-full bg-amber-400"></span>
@@ -249,6 +249,20 @@
           </div>
           <i data-lucide="chevron-right" class="w-4 h-4 text-amber-500"></i>
         </a>
+
+        <!-- Tombol Push Notifikasi di Drawer (Khusus Mobile) -->
+        <button id="drawerTogglePushNotifBtn" class="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-heather-50 text-left text-sm font-bold text-oase-plum border border-transparent hover:border-heather-200 transition-all group">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-heather-100 text-heather-700 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <i data-lucide="bell-ring" class="w-5 h-5"></i>
+            </div>
+            <div class="leading-tight">
+              <span>Pengingat & Notifikasi</span>
+              <span id="drawerPushNotifLabel" class="block text-[11px] text-oase-muted font-normal">Tekan untuk aktivasi</span>
+            </div>
+          </div>
+          <span id="drawerPushNotifStatusBadge" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+        </button>
       </div>
     </div>
 
