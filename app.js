@@ -454,8 +454,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
   };
 
-  const renderStories = (stories) => {
+  const renderStories = (rawStories) => {
     if (!storiesContainer) return;
+
+    // Filter ketat: Hanya cerita asli siswa (bukan komentar & bukan yang terhapus), maks 4 cerita
+    const stories = (rawStories || []).filter(story => 
+      story && 
+      story.content && 
+      story.content.trim() !== '' && 
+      story.emotion_tag && 
+      !story.emotion_tag.startsWith('COMMENT:') && 
+      !story.emotion_tag.toUpperCase().includes('DELETED') && 
+      !story.content.includes('telah dihapus') &&
+      !story.content.startsWith('[')
+    ).slice(0, 4);
 
     if (!stories || stories.length === 0) {
       storiesContainer.innerHTML = `
@@ -545,7 +557,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const loadStories = async () => {
     try {
-      const stories = await window.StoryService.getStories(12);
+      const stories = await window.StoryService.getStories(4);
       renderStories(stories);
     } catch (err) {
       console.warn('Error loading stories:', err);

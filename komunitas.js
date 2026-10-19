@@ -187,10 +187,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       allStories = getStoredCommunityStories();
     }
 
+    // Filter cerita bersih (abaikan komentar, item terhapus, atau teks kosong)
+    const validStories = (allStories || []).filter(s => 
+      s && 
+      s.content && 
+      s.content.trim() !== '' && 
+      !s.content.includes('telah dihapus') &&
+      !s.content.startsWith('[') &&
+      !(s.emotion || '').includes('DELETED') &&
+      !(s.category || '').includes('DELETED') &&
+      !(s.category || '').startsWith('COMMENT:')
+    );
+
     // Filter kategori
     const filteredStories = currentCategory === 'all'
-      ? allStories
-      : allStories.filter(s => 
+      ? validStories
+      : validStories.filter(s => 
           (s.category || '').toLowerCase().includes(currentCategory.toLowerCase()) ||
           (s.emotion || '').toLowerCase().includes(currentCategory.toLowerCase())
         );
@@ -233,8 +245,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     filteredStories.forEach(story => {
       const storyId = story.id;
-      // Cerita baru TIDAK memiliki komentar dummy buatan
-      const storyComments = storedComments[storyId] || [];
+      // Cerita baru TIDAK memiliki komentar dummy buatan, bersihkan komentar terhapus
+      const storyComments = (storedComments[storyId] || []).filter(c => 
+        c && 
+        c.content && 
+        c.content.trim() !== '' && 
+        !c.content.includes('telah dihapus') && 
+        !c.content.startsWith('[')
+      );
 
       // Cerita baru mulai dari 0 reaksi (bukan 16 atau 10!)
       const reactions = storedReactions[storyId] || {

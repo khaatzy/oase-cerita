@@ -683,6 +683,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     Object.keys(commentsObj).forEach(storyId => {
       const comments = commentsObj[storyId] || [];
       comments.forEach(comment => {
+        if (!comment || !comment.content || comment.content.trim() === '' || comment.content.includes('telah dihapus') || comment.content.startsWith('[')) return;
         totalCount++;
         // Cek apakah sudah di-whitelist oleh moderator
         if (whitelisted.includes(comment.id)) return;
@@ -926,6 +927,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     Object.keys(commentsObj).forEach(storyId => {
       const comments = commentsObj[storyId] || [];
       comments.forEach(c => {
+        if (!c || !c.content || c.content.trim() === '' || c.content.includes('telah dihapus') || c.content.startsWith('[')) return;
         if (!query || (c.author || '').toLowerCase().includes(query) || (c.content || '').toLowerCase().includes(query)) {
           allList.push({
             storyId,
@@ -1062,6 +1064,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const query = (filterQuery || '').toLowerCase().trim();
     const filtered = stories.filter(s => {
+      if (!s || !s.content || s.content.trim() === '' || s.content.includes('telah dihapus') || s.content.startsWith('[')) return false;
+      if ((s.emotion || '').includes('DELETED') || (s.category || '').includes('DELETED') || (s.category || '').startsWith('COMMENT:')) return false;
       if (!query) return true;
       const author = (s.author_name || s.author || '').toLowerCase();
       const content = (s.content || s.story_content || '').toLowerCase();

@@ -679,20 +679,36 @@ const AuthService = {
 
 // Layanan Data Cerita (Story Service)
 const StoryService = {
-  // Ambil daftar cerita dari database
-  async getStories(limit = 10) {
+  // Ambil daftar cerita dari database khusus preview dashboard (hanya cerita asli siswa, tanpa komentar & tanpa item terhapus)
+  async getStories(limit = 4) {
     if (!supabaseClient) return [];
-    const { data, error } = await supabaseClient
-      .from('stories')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    try {
+      const { data, error } = await supabaseClient
+        .from('stories')
+        .select('*')
+        .not('emotion_tag', 'ilike', 'COMMENT:%')
+        .not('emotion_tag', 'ilike', '%DELETED%')
+        .not('content', 'ilike', '%dihapus%')
+        .order('created_at', { ascending: false })
+        .limit(limit);
 
-    if (error) {
-      console.warn('Gagal memuat cerita dari Supabase:', error.message);
+      if (error) {
+        console.warn('Gagal memuat cerita dari Supabase:', error.message);
+        return [];
+      }
+      return (data || []).filter(s => 
+        s && 
+        s.content && 
+        s.content.trim() !== '' && 
+        s.emotion_tag && 
+        !s.emotion_tag.startsWith('COMMENT:') && 
+        !s.emotion_tag.toUpperCase().includes('DELETED') && 
+        !s.content.includes('telah dihapus')
+      );
+    } catch(e) {
+      console.warn('StoryService error:', e);
       return [];
     }
-    return data || [];
   },
 
   // Tambah cerita baru
@@ -1937,22 +1953,32 @@ const CommunityService = {
           .from('stories')
           .select('*')
           .not('emotion_tag', 'ilike', 'COMMENT:%')
-          .not('emotion_tag', 'eq', 'DELETED_COMMENT')
-          .not('emotion_tag', 'eq', 'DELETED_STORY')
+          .not('emotion_tag', 'ilike', '%DELETED%')
+          .not('content', 'ilike', '%dihapus%')
           .order('created_at', { ascending: false });
 
         if (!error && data && data.length > 0) {
-          list = data.map(row => ({
-            id: row.id,
-            author_name: row.author_name || 'Sahabat Anonim',
-            category: (row.emotion_tag && !row.emotion_tag.startsWith('COMMENT:')) ? row.emotion_tag : 'Akademik',
-            emotion: row.emotion_tag || 'Berbagi Cerita',
-            story_content: row.content,
-            content: row.content,
-            hugs: row.hug_count || 0,
-            cheers: 0,
-            created_at: row.created_at
-          }));
+          list = data
+            .filter(row => 
+              row && 
+              row.content && 
+              row.content.trim() !== '' && 
+              row.emotion_tag && 
+              !row.emotion_tag.startsWith('COMMENT:') && 
+              !row.emotion_tag.toUpperCase().includes('DELETED') && 
+              !row.content.includes('telah dihapus')
+            )
+            .map(row => ({
+              id: row.id,
+              author_name: row.author_name || 'Sahabat Anonim',
+              category: (row.emotion_tag && !row.emotion_tag.startsWith('COMMENT:')) ? row.emotion_tag : 'Akademik',
+              emotion: row.emotion_tag || 'Berbagi Cerita',
+              story_content: row.content,
+              content: row.content,
+              hugs: row.hug_count || 0,
+              cheers: 0,
+              created_at: row.created_at
+            }));
           localStorage.setItem('oase_community_stories', JSON.stringify(list));
           return list;
         }
@@ -2048,12 +2074,14 @@ const CommunityService = {
           .from('stories')
           .select('*')
           .like('emotion_tag', 'COMMENT:%')
+          .not('emotion_tag', 'ilike', '%DELETED%')
+          .not('content', 'ilike', '%dihapus%')
           .order('created_at', { ascending: false });
 
         if (!error && data && data.length > 0) {
           const map = {};
           data.forEach(item => {
-            if (item.content && !item.content.startsWith('[Dihapus')) {
+            if (item.content && item.content.trim() !== '' && !item.content.includes('telah dihapus') && !item.content.startsWith('[')) {
               const sId = item.emotion_tag.replace('COMMENT:', '');
               if (!map[sId]) map[sId] = [];
               map[sId].push({
@@ -2065,12 +2093,14 @@ const CommunityService = {
             }
           });
 
-          // Gabungkan dengan komentar lokal jika ada
+          // Gabungkan dengan komentar lokal jika ada dan bukan terhapus
           Object.keys(commentsObj).forEach(sid => {
             if (!map[sid]) map[sid] = [];
-            commentsObj[sid].forEach(lc => {
-              if (!map[sid].some(mc => mc.id === lc.id)) {
-                map[sid].push(lc);
+            (commentsObj[sid] || []).forEach(lc => {
+              if (lc && lc.content && lc.content.trim() !== '' && !lc.content.includes('telah dihapus') && !lc.content.startsWith('[')) {
+                if (!map[sid].some(mc => mc.id === lc.id)) {
+                  map[sid].push(lc);
+                }
               }
             });
           });
@@ -2186,13 +2216,18 @@ const CommunityService = {
     }
 
     if (supabaseClient && commentId) {
-      // Tandai komentar dihapus pada public.stories
+      // 1. Coba hapus permanen dari public.stories
+      try {
+        await supabaseClient.from('stories').delete().eq('id', commentId);
+      } catch(e) {}
+
+      // 2. Kosongkan teks dan tandai DELETED_PURGED agar tidak meninggalkan jejak teks
       try {
         await supabaseClient
           .from('stories')
           .update({
-            emotion_tag: 'DELETED_COMMENT',
-            content: '[Komentar ini telah dihapus oleh Moderator]'
+            emotion_tag: 'DELETED_PURGED',
+            content: ''
           })
           .eq('id', commentId);
       } catch(e) {}
@@ -2205,11 +2240,11 @@ const CommunityService = {
 
     const comments = this.getStoredCommentsSync();
     if (storyId && comments[storyId]) {
-      comments[storyId] = comments[storyId].filter(c => c.id !== commentId);
+      comments[storyId] = comments[storyId].filter(c => c.id !== commentId && c.content && c.content.trim() !== '');
       localStorage.setItem('oase_community_comments', JSON.stringify(comments));
     } else {
       Object.keys(comments).forEach(sid => {
-        comments[sid] = comments[sid].filter(c => c.id !== commentId);
+        comments[sid] = (comments[sid] || []).filter(c => c.id !== commentId && c.content && c.content.trim() !== '');
       });
       localStorage.setItem('oase_community_comments', JSON.stringify(comments));
     }
@@ -2245,24 +2280,31 @@ const CommunityService = {
     if (!storyId) return false;
 
     if (supabaseClient) {
-      // 1. Tandai cerita telah dihapus di public.stories
+      // 1. Coba hapus permanen cerita & komentar terkait
+      try {
+        await supabaseClient.from('stories').delete().eq('id', storyId);
+      } catch(e) {}
+      try {
+        await supabaseClient.from('stories').delete().eq('emotion_tag', 'COMMENT:' + storyId);
+      } catch(e) {}
+
+      // 2. Kosongkan teks dan tandai DELETED_PURGED agar tidak meninggalkan jejak teks
       try {
         await supabaseClient
           .from('stories')
           .update({
-            emotion_tag: 'DELETED_STORY',
-            content: '[Cerita ini telah dihapus oleh Moderator]'
+            emotion_tag: 'DELETED_PURGED',
+            content: ''
           })
           .eq('id', storyId);
       } catch(e) {}
 
-      // 2. Tandai komentar terkait cerita ini dihapus
       try {
         await supabaseClient
           .from('stories')
           .update({
-            emotion_tag: 'DELETED_COMMENT',
-            content: '[Dihapus bersama cerita]'
+            emotion_tag: 'DELETED_PURGED',
+            content: ''
           })
           .eq('emotion_tag', 'COMMENT:' + storyId);
       } catch(e) {}
@@ -2275,7 +2317,7 @@ const CommunityService = {
 
     // Hapus dari cache cerita lokal
     let stories = this.getStoredStoriesSync();
-    stories = stories.filter(s => s.id !== storyId);
+    stories = stories.filter(s => s.id !== storyId && s.content && s.content.trim() !== '' && !s.content.includes('telah dihapus'));
     localStorage.setItem('oase_community_stories', JSON.stringify(stories));
 
     // Hapus dari komentar cerita lokal

@@ -469,13 +469,22 @@
         </div>
       </div>
 
-      <!-- Live Stories Grid from Supabase -->
-      <div id="storiesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Live Stories Grid from Supabase (Maksimal 4 Cerita Preview, Tanpa Komentar) -->
+      <div id="storiesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <!-- Loading State Skeleton -->
         <div class="col-span-full py-12 text-center text-oase-muted">
           <div class="w-10 h-10 border-4 border-heather-200 border-t-heather-600 rounded-full animate-spin mx-auto mb-3"></div>
           <p class="text-sm font-medium">Menghubungkan ke database OASE Cerita...</p>
         </div>
+      </div>
+
+      <!-- Tombol Menuju Komunitas Lengkap -->
+      <div class="mt-10 text-center">
+        <a href="komunitas.html" class="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-white border border-heather-200 hover:border-heather-400 text-heather-700 hover:bg-heather-50 font-bold text-xs sm:text-sm shadow-xs transition-all transform hover:-translate-y-0.5">
+          <i data-lucide="compass" class="w-4 h-4 text-heather-600"></i>
+          <span>Jelajahi Semua Cerita di Komunitas</span>
+          <i data-lucide="arrow-right" class="w-4 h-4 text-heather-500"></i>
+        </a>
       </div>
 
     </div>
