@@ -126,15 +126,25 @@ WITH CHECK (true);
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (auth_user_id, email, full_name, role)
+    INSERT INTO public.profiles (auth_user_id, email, full_name, role, moderator_approval_status)
     VALUES (
         new.id,
         new.email,
-        COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
-        COALESCE(new.raw_user_meta_data->>'role', 'user')
+        COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1)),
+        COALESCE(new.raw_user_meta_data->>'role', 'user'),
+        CASE 
+            WHEN COALESCE(new.raw_user_meta_data->>'role', '') = 'moderator' THEN 'approved'
+            ELSE COALESCE(new.raw_user_meta_data->>'moderator_approval_status', 'pending')
+        END
     )
     ON CONFLICT (email) DO UPDATE
-    SET auth_user_id = new.id;
+    SET auth_user_id = new.id,
+        role = EXCLUDED.role,
+        moderator_approval_status = CASE 
+            WHEN EXCLUDED.role = 'moderator' THEN 'approved' 
+            ELSE EXCLUDED.moderator_approval_status 
+        END,
+        updated_at = timezone('utc'::text, now());
     RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -207,4 +217,57 @@ USING (true);
 CREATE POLICY "Partisipan sesi dapat mengirim pesan" 
 ON public.session_messages FOR INSERT 
 WITH CHECK (true);
+
+-- ========================================================
+-- 8. Tabel Cerita Komunitas Empatis (community_stories)
+-- ========================================================
+CREATE TABLE IF NOT EXISTS public.community_stories (
+    id TEXT PRIMARY KEY,
+    author_name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    emotion TEXT DEFAULT 'Berbagi Cerita',
+    story_content TEXT NOT NULL,
+    hugs INT DEFAULT 0,
+    cheers INT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.community_stories ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Semua orang dapat membaca cerita komunitas" 
+ON public.community_stories FOR SELECT 
+USING (true);
+
+CREATE POLICY "Semua orang dapat mengirim cerita komunitas" 
+ON public.community_stories FOR INSERT 
+WITH CHECK (true);
+
+CREATE POLICY "Semua orang dapat memperbarui reaksi pelukan dan semangat" 
+ON public.community_stories FOR UPDATE 
+USING (true);
+
+-- ========================================================
+-- 9. Tabel Komentar & Dukungan Komunitas (community_comments)
+-- ========================================================
+CREATE TABLE IF NOT EXISTS public.community_comments (
+    id TEXT PRIMARY KEY,
+    story_id TEXT NOT NULL,
+    author TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.community_comments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Semua orang dapat membaca komentar komunitas" 
+ON public.community_comments FOR SELECT 
+USING (true);
+
+CREATE POLICY "Semua orang dapat menulis komentar dukungan komunitas" 
+ON public.community_comments FOR INSERT 
+WITH CHECK (true);
+
+CREATE POLICY "Moderator dan pembuat komentar dapat menghapus komentar" 
+ON public.community_comments FOR DELETE 
+USING (true);
 

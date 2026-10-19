@@ -122,10 +122,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const toastNotification = document.getElementById('toastNotification');
   const toastMessage = document.getElementById('toastMessage');
 
-  // ============================================================================
-  // 3. INISIALISASI PENYIMPANAN DATA (LOCAL STORAGE STORES)
-  // ============================================================================
   function getCommunityComments() {
+    if (window.CommunityService && typeof window.CommunityService.getStoredCommentsSync === 'function') {
+      return window.CommunityService.getStoredCommentsSync();
+    }
     return JSON.parse(localStorage.getItem('oase_community_comments') || '{}');
   }
 
@@ -557,6 +557,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (closeDrawerBtn) closeDrawerBtn.onclick = closeDrawer;
   if (hamburgerDrawerOverlay) hamburgerDrawerOverlay.onclick = closeDrawer;
 
+  const drawerLoginModalBtn = document.getElementById('drawerLoginModalBtn');
+  if (drawerLoginModalBtn) {
+    drawerLoginModalBtn.onclick = () => {
+      closeDrawer();
+      openDualAuthModal();
+    };
+  }
+
   if (logoutDrawerBtn) {
     logoutDrawerBtn.onclick = async () => {
       if (confirm('Apakah kamu yakin ingin keluar dari Laman Moderator?')) {
@@ -987,9 +995,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (confirmDeleteBtn) {
-    confirmDeleteBtn.onclick = () => {
+    confirmDeleteBtn.onclick = async () => {
       if (!commentToDelete) return;
       const { storyId, commentId, author, text, reason } = commentToDelete;
+
+      if (window.CommunityService && typeof window.CommunityService.deleteComment === 'function') {
+        try {
+          await window.CommunityService.deleteComment({
+            storyId,
+            commentId,
+            deletedBy: currentModerator ? (currentModerator.display_name || currentModerator.email) : 'Moderator OASE',
+            reason: reason || 'Pelanggaran pedoman komunitas'
+          });
+        } catch (e) {
+          console.warn('CommunityService delete error:', e);
+        }
+      }
 
       const commentsObj = getCommunityComments();
       if (commentsObj[storyId]) {
@@ -1828,6 +1849,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function initDashboard() {
     setupWarmGreeting();
+    if (window.CommunityService && typeof window.CommunityService.getComments === 'function') {
+      try {
+        await window.CommunityService.getComments();
+      } catch(e) {}
+    }
     renderHateSpeechAlerts();
     renderAllCommunityComments();
     await renderBugReports();
@@ -1836,7 +1862,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAuditLogs();
     switchTab('hateSpeech');
 
-    // Inisialisasi Real-time Sync untuk Laporan Bug & Kamus SARA
+    // Inisialisasi Real-time Sync untuk Laporan Bug & Kamus SARA & Komunitas
     if (!isRealtimeSubscribed) {
       isRealtimeSubscribed = true;
 
@@ -1870,6 +1896,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast(`Moderator ${data.payload.added_by || 'lain'} mendaftarkan kosakata sensor baru: "${data.payload.keyword}"`);
           } else if (data.action === 'DELETE') {
             showToast('Daftar kamus sensor SARA diperbarui.');
+          }
+        });
+      }
+
+      // 3. Sinkronisasi Real-time Komentar Komunitas (Agar Peringatan SARA & Komentar Terhapus Live)
+      if (window.CommunityService && typeof window.CommunityService.initRealtime === 'function') {
+        window.CommunityService.initRealtime();
+        window.CommunityService.onUpdate((data) => {
+          if (!data) return;
+          renderHateSpeechAlerts();
+          renderAllCommunityComments(commentSearchInput ? commentSearchInput.value : '');
+
+          if (data.action === 'NEW_COMMENT' && data.payload) {
+            const { flaggedList } = scanCommunityCommentsForHateSpeech();
+            const isFlagged = flaggedList.some(f => f.commentId === data.payload.id);
+            if (isFlagged) {
+              playAlertPing();
+              showToast(`⚠️ Komentar baru melanggar sensor SARA terdeteksi dari ${data.payload.author || 'pengguna'}!`);
+            }
           }
         });
       }

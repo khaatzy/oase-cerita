@@ -409,8 +409,11 @@ const AuthService = {
         if (!error && data) {
           const rawName = data.display_name || data.full_name || '';
           const safeName = customModName || credName || (rawName && !rawName.includes('@') ? rawName : (cleanEmail ? cleanEmail.split('@')[0] : 'Sahabat OASE'));
+          const isMod = this.isModeratorEmail(cleanEmail, data);
           return {
             ...data,
+            role: isMod ? 'moderator' : (data.role || 'user'),
+            moderator_approval_status: isMod ? 'approved' : (data.moderator_approval_status || 'none'),
             display_name: safeName,
             full_name: safeName
           };
@@ -422,17 +425,21 @@ const AuthService = {
       const profile = savedProfiles[cleanEmail];
       const rawName = profile.display_name || profile.full_name || '';
       const safeName = customModName || credName || (rawName && !rawName.includes('@') ? rawName : cleanEmail.split('@')[0]);
+      const isMod = this.isModeratorEmail(cleanEmail, profile);
       return {
         ...profile,
+        role: isMod ? 'moderator' : (profile.role || 'user'),
+        moderator_approval_status: isMod ? 'approved' : (profile.moderator_approval_status || 'none'),
         display_name: safeName,
         full_name: safeName
       };
     }
+    const isMod = this.isModeratorEmail(cleanEmail);
     const finalName = customModName || credName || (cleanEmail ? cleanEmail.split('@')[0] : 'Sahabat OASE');
     return {
       email: cleanEmail || 'siswa@oase.id',
-      role: 'user',
-      moderator_approval_status: 'none',
+      role: isMod ? 'moderator' : 'user',
+      moderator_approval_status: isMod ? 'approved' : 'none',
       display_name: finalName,
       full_name: finalName
     };
@@ -560,7 +567,9 @@ const AuthService = {
           options: {
             data: {
               role: 'moderator',
-              display_name: cleanName
+              display_name: cleanName,
+              full_name: cleanName,
+              moderator_approval_status: 'approved'
             }
           }
         });
@@ -585,6 +594,18 @@ const AuthService = {
       } catch (e) {}
     }
 
+    // Simpan juga ke cache profil lokal dengan status approved
+    const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
+    savedProfiles[cleanEmail] = {
+      ...(savedProfiles[cleanEmail] || {}),
+      email: cleanEmail,
+      role: 'moderator',
+      display_name: cleanName,
+      full_name: cleanName,
+      moderator_approval_status: 'approved'
+    };
+    localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
+
     // 3. Simpan kredensial moderator lokal (agar admin bisa melihat/menyalin & langsung login)
     const modCreds = this.getModeratorCredentialsMap();
     modCreds[cleanEmail] = {
@@ -603,19 +624,6 @@ const AuthService = {
       dynamic.push(cleanEmail);
       localStorage.setItem('oase_custom_moderator_whitelist', JSON.stringify(dynamic));
     }
-
-    // 5. Simpan profil lokal
-    const savedProfiles = JSON.parse(localStorage.getItem('oase_user_profiles') || '{}');
-    savedProfiles[cleanEmail] = {
-      email: cleanEmail,
-      role: 'moderator',
-      display_name: cleanName,
-      full_name: cleanName,
-      moderator_approval_status: 'approved',
-      added_by: addedBy,
-      added_at: new Date().toISOString()
-    };
-    localStorage.setItem('oase_user_profiles', JSON.stringify(savedProfiles));
 
     return { success: true, email: cleanEmail, password, displayName: cleanName };
   },
@@ -1714,6 +1722,324 @@ const SaraKeywordService = {
   }
 };
 
+// ==============================================================================
+// 9. LAYANAN KOMUNITAS EMPATIS (COMMUNITY STORIES & COMMENTS REAL-TIME)
+// Sinkronisasi Cerita & Komentar Komunitas Antar Seluruh Pengguna & Moderator
+// ==============================================================================
+const CommunityService = {
+  _channel: null,
+  _listeners: [],
+  _initialized: false,
+
+  DEFAULT_STORIES: [
+    {
+      id: 'story-kom-1',
+      author_name: 'Bintang Kecil',
+      category: 'Akademik',
+      emotion: 'Cemas',
+      created_at: new Date(Date.now() - 3600000 * 3).toISOString(),
+      story_content: 'Menjelang ujian akhir sekolah ini kepalaku sering pusing dan overthinking takut tidak bisa membanggakan orang tua. Kadang rasanya ingin istirahat sejenak tapi takut tertinggal oleh teman-teman yang lain.',
+      hugs: 14,
+      cheers: 22
+    },
+    {
+      id: 'story-kom-2',
+      author_name: 'Pengelana Senja',
+      category: 'Pertemanan',
+      emotion: 'Kesepian',
+      created_at: new Date(Date.now() - 3600000 * 8).toISOString(),
+      story_content: 'Di kelas rasanya ramai sekali, tapi kenapa aku merasa sangat sendiri ya? Teman-teman sekelompok asyik membicarakan hal yang tidak kupahami. Ada yang pernah merasa asing di tengah keramaian seperti ini?',
+      hugs: 31,
+      cheers: 19
+    },
+    {
+      id: 'story-kom-3',
+      author_name: 'Pena Teduh',
+      category: 'Keluarga',
+      emotion: 'Lelah',
+      created_at: new Date(Date.now() - 3600000 * 18).toISOString(),
+      story_content: 'Ekspektasi orang tua terhadap nilaiku begitu tinggi. Setiap kali pulang membawa nilai 80 selalu dibandingkan dengan saudara yang dapat 95. Tapi hari ini aku bersyukur masih bisa tersenyum dan menemukan ruang aman ini.',
+      hugs: 45,
+      cheers: 38
+    }
+  ],
+
+  initRealtime() {
+    if (this._initialized) return;
+    this._initialized = true;
+
+    // 1. BroadcastChannel untuk sinkronisasi seketika antar-tab peramban
+    if ('BroadcastChannel' in window) {
+      try {
+        this._bc = new BroadcastChannel('oase_community_sync_channel');
+        this._bc.onmessage = (e) => {
+          this._handleIncomingUpdate(e.data);
+        };
+      } catch(e) {}
+    }
+
+    // 2. Supabase Realtime Broadcast Room untuk sinkronisasi antar perangkat/pengguna
+    if (supabaseClient && typeof supabaseClient.channel === 'function') {
+      try {
+        this._channel = supabaseClient.channel('oase_community_room', {
+          config: { broadcast: { self: false } }
+        });
+        this._channel.on('broadcast', { event: 'community_update' }, ({ payload }) => {
+          this._handleIncomingUpdate(payload);
+        }).subscribe();
+      } catch(e) {}
+    }
+  },
+
+  onUpdate(callback) {
+    if (typeof callback === 'function') {
+      this._listeners.push(callback);
+    }
+  },
+
+  _notifyListeners(data) {
+    this._listeners.forEach(cb => {
+      try { cb(data); } catch(e) {}
+    });
+  },
+
+  _broadcast(action, payload) {
+    const data = { action, payload, timestamp: Date.now() };
+    if (this._bc) {
+      try { this._bc.postMessage(data); } catch(e) {}
+    }
+    if (this._channel) {
+      try {
+        this._channel.send({
+          type: 'broadcast',
+          event: 'community_update',
+          payload: data
+        });
+      } catch(e) {}
+    }
+  },
+
+  _handleIncomingUpdate(data) {
+    if (!data) return;
+    if (data.action === 'NEW_STORY' && data.payload) {
+      const stories = this.getStoredStoriesSync();
+      if (!stories.some(s => s.id === data.payload.id)) {
+        stories.unshift(data.payload);
+        localStorage.setItem('oase_community_stories', JSON.stringify(stories));
+      }
+    } else if (data.action === 'NEW_COMMENT' && data.payload) {
+      const comments = this.getStoredCommentsSync();
+      const sId = data.payload.story_id;
+      if (!comments[sId]) comments[sId] = [];
+      if (!comments[sId].some(c => c.id === data.payload.id)) {
+        comments[sId].unshift(data.payload);
+        localStorage.setItem('oase_community_comments', JSON.stringify(comments));
+      }
+    } else if (data.action === 'DELETE_COMMENT' && data.payload) {
+      const comments = this.getStoredCommentsSync();
+      const { storyId, commentId } = data.payload;
+      if (comments[storyId]) {
+        comments[storyId] = comments[storyId].filter(c => c.id !== commentId);
+        localStorage.setItem('oase_community_comments', JSON.stringify(comments));
+      }
+    } else if (data.action === 'REACTION' && data.payload) {
+      const { storyId, type, count } = data.payload;
+      const stories = this.getStoredStoriesSync();
+      const st = stories.find(s => s.id === storyId);
+      if (st) {
+        st[type] = count;
+        localStorage.setItem('oase_community_stories', JSON.stringify(stories));
+      }
+    }
+    this._notifyListeners(data);
+  },
+
+  getStoredStoriesSync() {
+    try {
+      const local = JSON.parse(localStorage.getItem('oase_community_stories') || '[]');
+      if (local && local.length > 0) return local;
+      return [...this.DEFAULT_STORIES];
+    } catch(e) {
+      return [...this.DEFAULT_STORIES];
+    }
+  },
+
+  getStoredCommentsSync() {
+    try {
+      return JSON.parse(localStorage.getItem('oase_community_comments') || '{}');
+    } catch(e) {
+      return {};
+    }
+  },
+
+  async getStories() {
+    let list = [];
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('community_stories')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          list = data;
+          localStorage.setItem('oase_community_stories', JSON.stringify(list));
+          return list;
+        }
+      } catch(e) {}
+    }
+
+    const local = this.getStoredStoriesSync();
+    return local;
+  },
+
+  async createStory({ authorName, category, emotion, content }) {
+    if (!content || !content.trim()) throw new Error('Isi cerita tidak boleh kosong.');
+    const newStory = {
+      id: 'story-kom-' + Date.now(),
+      author_name: authorName && authorName.trim() ? authorName.trim() : 'Sahabat Anonim',
+      category: category || 'Akademik',
+      emotion: emotion || 'Berbagi Cerita',
+      story_content: content.trim(),
+      hugs: 0,
+      cheers: 0,
+      created_at: new Date().toISOString()
+    };
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('community_stories').insert([newStory]);
+      } catch(e) {}
+    }
+
+    const stories = this.getStoredStoriesSync();
+    stories.unshift(newStory);
+    localStorage.setItem('oase_community_stories', JSON.stringify(stories));
+
+    this._broadcast('NEW_STORY', newStory);
+    return newStory;
+  },
+
+  async getComments() {
+    let commentsObj = this.getStoredCommentsSync();
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('community_comments')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          const map = {};
+          data.forEach(item => {
+            if (!map[item.story_id]) map[item.story_id] = [];
+            map[item.story_id].push({
+              id: item.id,
+              author: item.author,
+              content: item.content,
+              created_at: item.created_at
+            });
+          });
+          // Gabungkan dengan komentar lokal jika ada
+          Object.keys(commentsObj).forEach(sid => {
+            if (!map[sid]) map[sid] = [];
+            commentsObj[sid].forEach(lc => {
+              if (!map[sid].some(mc => mc.id === lc.id)) {
+                map[sid].push(lc);
+              }
+            });
+          });
+          commentsObj = map;
+          localStorage.setItem('oase_community_comments', JSON.stringify(commentsObj));
+        }
+      } catch(e) {}
+    }
+    return commentsObj;
+  },
+
+  async addComment({ storyId, author, content }) {
+    if (!content || !content.trim()) throw new Error('Isi komentar tidak boleh kosong.');
+    const newComment = {
+      id: 'c-' + Date.now(),
+      story_id: storyId,
+      author: author && author.trim() ? author.trim() : 'Sahabat OASE',
+      content: content.trim(),
+      created_at: new Date().toISOString()
+    };
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('community_comments').insert([newComment]);
+      } catch(e) {}
+    }
+
+    const comments = this.getStoredCommentsSync();
+    if (!comments[storyId]) comments[storyId] = [];
+    comments[storyId].unshift({
+      id: newComment.id,
+      author: newComment.author,
+      content: newComment.content,
+      created_at: newComment.created_at
+    });
+    localStorage.setItem('oase_community_comments', JSON.stringify(comments));
+
+    this._broadcast('NEW_COMMENT', newComment);
+    return newComment;
+  },
+
+  async deleteComment(arg1, arg2) {
+    let storyId, commentId, deletedBy = 'Moderator', reason = '';
+    if (typeof arg1 === 'object' && arg1 !== null) {
+      storyId = arg1.storyId;
+      commentId = arg1.commentId;
+      deletedBy = arg1.deletedBy || 'Moderator';
+      reason = arg1.reason || '';
+    } else {
+      storyId = arg1;
+      commentId = arg2;
+    }
+
+    if (supabaseClient && commentId) {
+      try {
+        await supabaseClient.from('community_comments').delete().eq('id', commentId);
+      } catch(e) {}
+    }
+
+    const comments = this.getStoredCommentsSync();
+    if (storyId && comments[storyId]) {
+      comments[storyId] = comments[storyId].filter(c => c.id !== commentId);
+      localStorage.setItem('oase_community_comments', JSON.stringify(comments));
+    } else {
+      // Jika storyId tidak diberikan, cari dan hapus dari seluruh stories
+      Object.keys(comments).forEach(sid => {
+        comments[sid] = comments[sid].filter(c => c.id !== commentId);
+      });
+      localStorage.setItem('oase_community_comments', JSON.stringify(comments));
+    }
+
+    this._broadcast('DELETE_COMMENT', { storyId, commentId, deletedBy, reason });
+    return true;
+  },
+
+  async sendReaction({ storyId, type = 'hugs' }) {
+    const stories = this.getStoredStoriesSync();
+    const target = stories.find(s => s.id === storyId);
+    let newCount = 1;
+    if (target) {
+      target[type] = (target[type] || 0) + 1;
+      newCount = target[type];
+      localStorage.setItem('oase_community_stories', JSON.stringify(stories));
+    }
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('community_stories').update({ [type]: newCount }).eq('id', storyId);
+      } catch(e) {}
+    }
+
+    this._broadcast('REACTION', { storyId, type, count: newCount });
+    return newCount;
+  }
+};
+
 // Ekspor ke window global agar mudah diakses di seluruh aplikasi
 window.AuthService = AuthService;
 window.StoryService = StoryService;
@@ -1721,6 +2047,7 @@ window.CounselingService = CounselingService;
 window.GeminiService = GeminiService;
 window.BugReportService = BugReportService;
 window.SaraKeywordService = SaraKeywordService;
+window.CommunityService = CommunityService;
 
 
 

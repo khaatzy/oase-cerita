@@ -139,13 +139,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('oase_community_stories', JSON.stringify(stories));
   }
 
-  // 3. RENDER FEED KOMUNITAS (HANYA MEMUAT CERITA KHUSUS KOMUNITAS, PRIVASI KONSELING 100% TERJAGA)
+  // 3. RENDER FEED KOMUNITAS (MEMUAT CERITA & KOMENTAR DARI DATABASE & REAL-TIME)
   async function renderCommunityFeed() {
     await checkUserRole();
 
-    // HANYA memuat cerita yang sengaja dikirimkan ke komunitas (privasi konseling 100% terjaga)
-    const communityUserStories = getStoredCommunityStories();
-    let allStories = [...communityUserStories, ...defaultCommunityStories];
+    // Memuat cerita dari CommunityService (Supabase + Realtime + Local Fallback)
+    let allStories = [];
+    if (window.CommunityService && typeof window.CommunityService.getStories === 'function') {
+      try {
+        allStories = await window.CommunityService.getStories();
+      } catch(e) {
+        allStories = [...getStoredCommunityStories(), ...defaultCommunityStories];
+      }
+    } else {
+      allStories = [...getStoredCommunityStories(), ...defaultCommunityStories];
+    }
 
     // Filter kategori
     const filteredStories = currentCategory === 'all'
@@ -174,7 +182,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const storedComments = getStoredComments();
+    let storedComments = {};
+    if (window.CommunityService && typeof window.CommunityService.getComments === 'function') {
+      try {
+        storedComments = await window.CommunityService.getComments();
+      } catch(e) {
+        storedComments = getStoredComments();
+      }
+    } else {
+      storedComments = getStoredComments();
+    }
     const storedReactions = getStoredReactions();
 
     communityFeedContainer.innerHTML = '';
@@ -328,7 +345,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function attachEventListeners() {
     // Tombol Pelukan Virtual
     document.querySelectorAll('.hug-btn').forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = async () => {
         const storyId = btn.dataset.storyId;
         const stored = getStoredReactions();
         const cur = stored[storyId] || { hugs: 10, cheers: 15, userHugged: false, userCheered: false };
@@ -339,6 +356,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           saveStoredReactions(stored);
           btn.classList.add('bg-rose-100', 'border-rose-300', 'text-rose-800', 'font-bold');
           btn.querySelector('.hug-count').textContent = `(${cur.hugs})`;
+          if (window.CommunityService && typeof window.CommunityService.sendReaction === 'function') {
+            await window.CommunityService.sendReaction({ storyId, type: 'hugs' });
+          }
           showToast('Pelukan virtual berhasil dikirim! 🤗');
         } else {
           showToast('Anda sudah mengirimkan pelukan virtual untuk cerita ini.');
@@ -348,7 +368,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Tombol Semangat
     document.querySelectorAll('.cheer-btn').forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = async () => {
         const storyId = btn.dataset.storyId;
         const stored = getStoredReactions();
         const cur = stored[storyId] || { hugs: 10, cheers: 15, userHugged: false, userCheered: false };
@@ -359,6 +379,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           saveStoredReactions(stored);
           btn.classList.add('bg-amber-100', 'border-amber-300', 'text-amber-900', 'font-bold');
           btn.querySelector('.cheer-count').textContent = `(${cur.cheers})`;
+          if (window.CommunityService && typeof window.CommunityService.sendReaction === 'function') {
+            await window.CommunityService.sendReaction({ storyId, type: 'cheers' });
+          }
           showToast('Dukungan semangat berhasil dikirim! ❤️');
         } else {
           showToast('Anda sudah mengirimkan semangat untuk cerita ini.');
@@ -368,7 +391,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Form Tambah Komentar
     document.querySelectorAll('.comment-form').forEach(form => {
-      form.onsubmit = (e) => {
+      form.onsubmit = async (e) => {
         e.preventDefault();
         const storyId = form.dataset.storyId;
         const input = form.querySelector('.comment-input');
@@ -384,35 +407,30 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         }
 
-        const storedComments = getStoredComments();
-        if (!storedComments[storyId]) storedComments[storyId] = [];
+        if (window.CommunityService && typeof window.CommunityService.addComment === 'function') {
+          await window.CommunityService.addComment({
+            storyId,
+            author: currentUserName || 'Sahabat OASE',
+            content: text
+          });
+        } else {
+          const storedComments = getStoredComments();
+          if (!storedComments[storyId]) storedComments[storyId] = [];
 
-        const newComment = {
-          id: 'c-' + Date.now(),
-          author: currentUserName || 'Sahabat OASE',
-          content: text,
-          created_at: new Date().toISOString()
-        };
+          const newComment = {
+            id: 'c-' + Date.now(),
+            author: currentUserName || 'Sahabat OASE',
+            content: text,
+            created_at: new Date().toISOString()
+          };
 
-        storedComments[storyId].unshift(newComment);
-        saveStoredComments(storedComments);
-
-        // Perbarui tampilan komentar
-        const listContainer = document.getElementById(`comments-list-${storyId}`);
-        if (listContainer) {
-          listContainer.innerHTML = renderCommentsListHtml(storyId, storedComments[storyId]);
-          lucide.createIcons();
-          attachDeleteCommentEvents();
-        }
-
-        // Perbarui counter tombol
-        const toggleBtn = document.querySelector(`.toggle-comments-btn[data-story-id="${storyId}"]`);
-        if (toggleBtn) {
-          toggleBtn.querySelector('span').textContent = `Dukungan (${storedComments[storyId].length})`;
+          storedComments[storyId].unshift(newComment);
+          saveStoredComments(storedComments);
         }
 
         input.value = '';
         showToast('Komentar dukungan Anda berhasil dibagikan! ✨');
+        await renderCommunityFeed();
       };
     });
 
@@ -442,33 +460,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (confirmDeleteCommentBtn) {
-    confirmDeleteCommentBtn.onclick = () => {
+    confirmDeleteCommentBtn.onclick = async () => {
       if (!commentToDelete || !isModerator) return;
       const { storyId, commentId } = commentToDelete;
 
-      const storedComments = getStoredComments();
-      if (storedComments[storyId]) {
-        storedComments[storyId] = storedComments[storyId].filter(c => c.id !== commentId);
-        saveStoredComments(storedComments);
-
-        // Perbarui UI daftar komentar
-        const listContainer = document.getElementById(`comments-list-${storyId}`);
-        if (listContainer) {
-          listContainer.innerHTML = renderCommentsListHtml(storyId, storedComments[storyId]);
-          lucide.createIcons();
-          attachDeleteCommentEvents();
-        }
-
-        // Perbarui counter tombol
-        const toggleBtn = document.querySelector(`.toggle-comments-btn[data-story-id="${storyId}"]`);
-        if (toggleBtn) {
-          toggleBtn.querySelector('span').textContent = `Dukungan (${storedComments[storyId].length})`;
+      if (window.CommunityService && typeof window.CommunityService.deleteComment === 'function') {
+        await window.CommunityService.deleteComment({
+          storyId,
+          commentId,
+          deletedBy: currentUserName || 'Moderator OASE',
+          reason: 'Pelanggaran pedoman komunitas'
+        });
+      } else {
+        const storedComments = getStoredComments();
+        if (storedComments[storyId]) {
+          storedComments[storyId] = storedComments[storyId].filter(c => c.id !== commentId);
+          saveStoredComments(storedComments);
         }
       }
 
       commentToDelete = null;
       if (deleteCommentModal) deleteCommentModal.classList.add('hidden');
       showToast('Komentar berhasil dihapus oleh Moderator. 🛡️');
+      await renderCommunityFeed();
     };
   }
 
@@ -521,7 +535,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (newCommunityStoryForm) {
-    newCommunityStoryForm.onsubmit = (e) => {
+    newCommunityStoryForm.onsubmit = async (e) => {
       e.preventDefault();
       const author = communityStoryAuthorInput ? communityStoryAuthorInput.value.trim() : '';
       const category = communityStoryCategorySelect ? communityStoryCategorySelect.value : 'Akademik';
@@ -538,24 +552,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
 
-      const newStory = {
-        id: 'story-kom-' + Date.now(),
-        author_name: author || 'Sahabat Anonim',
-        category: category,
-        emotion: 'Berbagi Cerita',
-        created_at: new Date().toISOString(),
-        story_content: content,
-        hugs: 0,
-        cheers: 0
-      };
-
-      const stories = getStoredCommunityStories();
-      stories.unshift(newStory);
-      saveStoredCommunityStories(stories);
+      if (window.CommunityService && typeof window.CommunityService.createStory === 'function') {
+        try {
+          await window.CommunityService.createStory({
+            authorName: author || 'Sahabat Anonim',
+            category: category,
+            emotion: 'Berbagi Cerita',
+            content: content
+          });
+        } catch(err) {
+          console.warn('Gagal menyimpan via CommunityService, fallback lokal:', err);
+          const newStory = {
+            id: 'story-kom-' + Date.now(),
+            author_name: author || 'Sahabat Anonim',
+            category: category,
+            emotion: 'Berbagi Cerita',
+            created_at: new Date().toISOString(),
+            story_content: content,
+            hugs: 0,
+            cheers: 0
+          };
+          const stories = getStoredCommunityStories();
+          stories.unshift(newStory);
+          saveStoredCommunityStories(stories);
+        }
+      } else {
+        const newStory = {
+          id: 'story-kom-' + Date.now(),
+          author_name: author || 'Sahabat Anonim',
+          category: category,
+          emotion: 'Berbagi Cerita',
+          created_at: new Date().toISOString(),
+          story_content: content,
+          hugs: 0,
+          cheers: 0
+        };
+        const stories = getStoredCommunityStories();
+        stories.unshift(newStory);
+        saveStoredCommunityStories(stories);
+      }
 
       closeNewStoryModal();
-      renderCommunityFeed();
-      showToast('Cerita komunitasmu berhasil dibagikan! ✨');
+      await renderCommunityFeed();
+      showToast('Cerita komunitasmu berhasil dibagikan ke semua orang! ✨');
     };
   }
 
@@ -595,6 +634,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 3000);
   }
 
+  // Inisialisasi Realtime Synchronization untuk Komunitas
+  if (window.CommunityService && typeof window.CommunityService.initRealtime === 'function') {
+    window.CommunityService.initRealtime();
+    window.CommunityService.onUpdate(() => {
+      renderCommunityFeed();
+    });
+  }
+
   // Mulai memuat
-  renderCommunityFeed();
+  await renderCommunityFeed();
 });
