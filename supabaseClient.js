@@ -108,7 +108,12 @@ const CrisisDetectionService = {
     { regex: /\b(?:n[e3*#@_0-9]*gr[o0*#@_0-9]+|n[i1*#@!_0-9]*gg[a4e3*#@_0-9]+)\b/i, keyword: 'negro/nigger', category: 'sara', label: 'Ujaran Kebencian / SARA (Ras)' }
   ],
 
-  // Normalisasi teks untuk leet-speak dasar
+  escapeRegex(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  },
+
+  // Normalisasi teks untuk leet-speak dasar & kompresi karakter berulang
   normalizeText(str) {
     if (!str || typeof str !== 'string') return '';
     return str.toLowerCase()
@@ -118,7 +123,37 @@ const CrisisDetectionService = {
       .replace(/[3]/g, 'e')
       .replace(/[$5]/g, 's')
       .replace(/[7]/g, 't')
-      .replace(/[8]/g, 'b');
+      .replace(/[8]/g, 'b')
+      .replace(/(.)\1{2,}/g, '$1'); // Kompresi karakter berulang 3x+ jadi 1 (misal: taiiii -> tai)
+  },
+
+  // Pencocokan kata cerdas berbasis batas kata (Word Boundary)
+  // Menghindari Scunthorpe Problem: 'mencintai', 'pantai', 'santai' TIDAK kena karena 'tai',
+  // 'kasus', 'asumsi' TIDAK kena karena 'asu', 'cocok', 'cokelat' TIDAK kena karena 'cok',
+  // 'pelihara' TIDAK kena karena 'peli'.
+  matchKeyword(text, keyword) {
+    if (!text || !keyword) return false;
+    const kwLower = keyword.toLowerCase().trim();
+    if (!kwLower) return false;
+    const kwNorm = this.normalizeText(kwLower);
+
+    const raw = text.toLowerCase();
+    const norm = this.normalizeText(text);
+
+    const escapedRawKw = this.escapeRegex(kwLower);
+    const escapedNormKw = this.escapeRegex(kwNorm);
+
+    try {
+      // Boundary batas kata: awal string atau bukan huruf/angka Unicode, diikuti kata, diakhiri akhir string atau bukan huruf/angka Unicode
+      const patternRaw = new RegExp('(?:^|[^\\p{L}\\p{N}])' + escapedRawKw + '(?=$|[^\\p{L}\\p{N}])', 'iu');
+      const patternNorm = new RegExp('(?:^|[^\\p{L}\\p{N}])' + escapedNormKw + '(?=$|[^\\p{L}\\p{N}])', 'iu');
+      return patternRaw.test(raw) || patternNorm.test(norm);
+    } catch (e) {
+      // Fallback kompatibilitas jika browser lama tidak mendukung \p{L}
+      const fallbackRaw = new RegExp('(?:^|[^a-zA-Z0-9_])' + escapedRawKw + '(?=$|[^a-zA-Z0-9_])', 'i');
+      const fallbackNorm = new RegExp('(?:^|[^a-zA-Z0-9_])' + escapedNormKw + '(?=$|[^a-zA-Z0-9_])', 'i');
+      return fallbackRaw.test(raw) || fallbackNorm.test(norm);
+    }
   },
 
   checkContent(text) {
@@ -146,9 +181,9 @@ const CrisisDetectionService = {
       }
     }
 
-    // 2. Cek Kosakata SARA
+    // 2. Cek Kosakata SARA (Menggunakan boundary agar kata legal seperti 'mencintai' tidak terblokir)
     for (const kw of this.SARA_KEYWORDS) {
-      if (raw.includes(kw) || normalized.includes(kw)) {
+      if (this.matchKeyword(text, kw)) {
         return {
           isCrisis: true,
           isSara: true,
@@ -162,7 +197,7 @@ const CrisisDetectionService = {
 
     // 3. Cek Kosakata Kekerasan
     for (const kw of this.VIOLENCE_KEYWORDS) {
-      if (raw.includes(kw) || normalized.includes(kw)) {
+      if (this.matchKeyword(text, kw)) {
         return {
           isCrisis: true,
           isSara: false,
@@ -176,7 +211,7 @@ const CrisisDetectionService = {
 
     // 4. Cek Kosakata Krisis & Self-Harm
     for (const kw of this.CRISIS_KEYWORDS) {
-      if (raw.includes(kw) || normalized.includes(kw)) {
+      if (this.matchKeyword(text, kw)) {
         return {
           isCrisis: true,
           isSara: false,
@@ -198,7 +233,7 @@ const CrisisDetectionService = {
     for (const item of customKeywords) {
       const kw = (item.keyword || '').toLowerCase().trim();
       if (!kw) continue;
-      if (raw.includes(kw) || normalized.includes(kw)) {
+      if (this.matchKeyword(text, kw)) {
         const cat = item.category || 'sara';
         return {
           isCrisis: cat === 'krisis',

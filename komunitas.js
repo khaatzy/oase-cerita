@@ -83,17 +83,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (res && res.isViolation) return res;
     }
 
-    // 2. Cek kamus kustom sensor SARA dari Moderator
+    // 2. Cek kamus kustom sensor SARA dari Moderator (Gunakan boundary agar 'mencintai' tidak terblokir karena 'tai')
     const customList = (window.SaraKeywordService && typeof window.SaraKeywordService.getCustomKeywordsSync === 'function')
       ? window.SaraKeywordService.getCustomKeywordsSync()
       : (() => { try { return JSON.parse(localStorage.getItem('oase_custom_sara_keywords') || '[]'); } catch(e) { return []; } })();
 
-    const lower = text.toLowerCase();
     for (const item of customList) {
       const kw = (item.keyword || '').toLowerCase().trim();
       if (!kw) continue;
-      if (lower.includes(kw)) {
-        return { isViolation: true, matchedKeyword: item.keyword, category: item.category || 'sara' };
+      if (window.CrisisDetectionService && typeof window.CrisisDetectionService.matchKeyword === 'function') {
+        if (window.CrisisDetectionService.matchKeyword(text, kw)) {
+          return { isViolation: true, matchedKeyword: item.keyword, category: item.category || 'sara' };
+        }
+      } else {
+        const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = new RegExp('(?:^|[^\\p{L}\\p{N}])' + escaped + '(?=$|[^\\p{L}\\p{N}])', 'iu');
+        if (pattern.test(text)) {
+          return { isViolation: true, matchedKeyword: item.keyword, category: item.category || 'sara' };
+        }
       }
     }
 

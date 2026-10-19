@@ -701,7 +701,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           const lower = (comment.content || '').toLowerCase();
           const saraList = ['kafir', 'cokin', 'nigger', 'negro', 'aliran sesat', 'pki', 'kadrun', 'cebong', 'bunuh', 'mutilasi'];
           for (const word of saraList) {
-            if (lower.includes(word)) {
+            const pattern = new RegExp('(?:^|[^\\p{L}\\p{N}])' + word + '(?=$|[^\\p{L}\\p{N}])', 'iu');
+            if (pattern.test(lower)) {
               checkResult = { isViolation: true, isSara: true, label: 'Ujaran Kebencian / SARA', matchedKeyword: word };
               break;
             }
