@@ -689,26 +689,36 @@
     const counselorNotifList = document.getElementById('counselorNotifList');
     const clearCounselorNotifBtn = document.getElementById('clearCounselorNotifBtn');
 
-    // 3-Way Tab Switching
+    // 4-Way Tab Switching (Antrean vs Live Chat vs Riwayat Selesai vs Rating Kinerja)
+    const tabModeReviews = document.getElementById('tabModeReviews');
+    const reviewsSection = document.getElementById('reviewsSection');
+
     function switchCounselorTab(target) {
       const activeClass = 'px-5 py-2.5 rounded-2xl bg-heather-500 text-white font-bold text-xs shadow-sm flex items-center justify-center sm:justify-start gap-2 transition-all relative';
+      const activeReviewsClass = 'px-5 py-2.5 rounded-2xl bg-amber-500 text-white font-bold text-xs shadow-sm flex items-center justify-center sm:justify-start gap-2 transition-all relative';
       const inactiveClass = 'px-5 py-2.5 rounded-2xl bg-white border border-oase-border hover:bg-heather-50 text-oase-muted font-bold text-xs flex items-center justify-center sm:justify-start gap-2 transition-all relative';
+      const inactiveReviewsClass = 'px-5 py-2.5 rounded-2xl bg-white border border-amber-300 hover:bg-amber-50 text-amber-900 font-bold text-xs flex items-center justify-center sm:justify-start gap-2 transition-all relative';
 
       if (tabModeQueue) tabModeQueue.className = target === 'queue' ? activeClass : inactiveClass;
       if (tabModeLiveChat) tabModeLiveChat.className = target === 'live' ? activeClass : inactiveClass;
       if (tabModeHistory) tabModeHistory.className = target === 'history' ? activeClass : inactiveClass;
+      if (tabModeReviews) tabModeReviews.className = target === 'reviews' ? activeReviewsClass : inactiveReviewsClass;
 
       if (queueSection) queueSection.classList.toggle('hidden', target !== 'queue');
       if (liveChatSection) liveChatSection.classList.toggle('hidden', target !== 'live');
       if (historySection) historySection.classList.toggle('hidden', target !== 'history');
+      if (reviewsSection) reviewsSection.classList.toggle('hidden', target !== 'reviews');
 
       if (target === 'live') loadLiveSessions();
       if (target === 'history') loadHistorySessions();
+      if (target === 'reviews') loadReviewsSection();
+      if (window.lucide) lucide.createIcons();
     }
 
     if (tabModeQueue) tabModeQueue.addEventListener('click', () => switchCounselorTab('queue'));
     if (tabModeLiveChat) tabModeLiveChat.addEventListener('click', () => switchCounselorTab('live'));
     if (tabModeHistory) tabModeHistory.addEventListener('click', () => switchCounselorTab('history'));
+    if (tabModeReviews) tabModeReviews.addEventListener('click', () => switchCounselorTab('reviews'));
 
     if (refreshLiveSessionsBtn) refreshLiveSessionsBtn.addEventListener('click', loadLiveSessions);
     if (refreshHistorySessionsBtn) refreshHistorySessionsBtn.addEventListener('click', loadHistorySessions);
@@ -1142,21 +1152,21 @@
       });
     }
 
-        // ========================================================
-    // MODAL SEMUA ULASAN & PENILAIAN SISWA
+            // ========================================================
+    // MODAL & HALAMAN EVALUASI RATING & ULASAN SISWA
     // ========================================================
-    function openAllReviewsModal() {
-      const counselorReviewsModal = document.getElementById('counselorReviewsModal');
-      const counselorReviewsContainer = document.getElementById('counselorReviewsContainer');
-      if (!counselorReviewsModal || !counselorReviewsContainer) {
-        console.warn('counselorReviewsModal not found');
-        return;
-      }
-      counselorReviewsModal.classList.remove('hidden');
+    let currentReviewFilter = 'all';
+
+    function loadReviewsSection() {
+      const container = document.getElementById('reviewsSectionCardsContainer');
+      const avgDisplay = document.getElementById('reviewsAverageRatingDisplay');
+      const countDisplay = document.getElementById('reviewsTotalCountDisplay');
+      const countBadge = document.getElementById('reviewsCountBadge');
+      if (!container) return;
 
       const reviews = [];
 
-      // 1. Kumpulkan dari curhat antrean yang sudah dijawab & dinilai
+      // 1. Kumpulkan dari antrean curhat
       const allStories = Array.isArray(allQueueStories) && allQueueStories.length > 0 
         ? allQueueStories 
         : JSON.parse(localStorage.getItem('oase_counseling_submissions') || '[]');
@@ -1166,18 +1176,19 @@
                        (s.counselor_name && currentSession.name && (s.counselor_name.includes(currentSession.name) || currentSession.name.includes(s.counselor_name)));
         if (isMine && s.rating) {
           reviews.push({
+            type: 'curhat',
             source: 'Curhat Anonim',
             ticket: s.ticket_code,
             category: s.category || 'Curhat Siswa',
             rating: parseInt(s.rating) || 5,
-            review: s.review,
+            review: s.review || '',
             userName: 's***a',
             date: s.rated_at || s.replied_at || s.created_at
           });
         }
       });
 
-      // 2. Kumpulkan dari sesi konseling live yang sudah selesai
+      // 2. Kumpulkan dari sesi konseling live
       try {
         const liveSessions = JSON.parse(localStorage.getItem('oase_counseling_sessions') || '[]');
         liveSessions.forEach(s => {
@@ -1185,11 +1196,12 @@
                          (s.counselor_name && currentSession.name && (s.counselor_name.includes(currentSession.name) || currentSession.name.includes(s.counselor_name)));
           if (isMine && s.rating) {
             reviews.push({
+              type: 'live',
               source: 'Konseling Live 30 Menit',
               ticket: `Sesi #${s.id ? s.id.substring(0, 8) : 'Booking'}`,
               category: s.topic || 'Sesi Live',
               rating: parseInt(s.rating) || 5,
-              review: s.review,
+              review: s.review || '',
               userName: 's***a',
               date: s.rated_at || s.ended_at || s.scheduled_at
             });
@@ -1197,39 +1209,71 @@
         });
       } catch(e) {}
 
-      reviews.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+      // Update stat display
+      if (countBadge) {
+        countBadge.textContent = reviews.length;
+        countBadge.classList.toggle('hidden', reviews.length === 0);
+      }
+      if (countDisplay) countDisplay.textContent = reviews.length;
 
-      if (reviews.length === 0) {
-        counselorReviewsContainer.innerHTML = `
-          <div class="p-8 rounded-2xl border-2 border-dashed border-gray-200 text-center space-y-2 bg-gray-50/50">
-            <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto">
-              <i data-lucide="star" class="w-5 h-5"></i>
+      if (reviews.length > 0) {
+        const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
+        const avg = (totalRating / reviews.length).toFixed(1);
+        if (avgDisplay) avgDisplay.textContent = avg;
+      } else {
+        if (avgDisplay) avgDisplay.textContent = '5.0';
+      }
+
+      // Filter
+      let filtered = [...reviews];
+      if (currentReviewFilter === 'curhat') {
+        filtered = filtered.filter(r => r.type === 'curhat');
+      } else if (currentReviewFilter === 'live') {
+        filtered = filtered.filter(r => r.type === 'live');
+      }
+
+      // Urutkan terbaru
+      filtered.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full p-10 rounded-3xl border-2 border-dashed border-gray-200 text-center space-y-2 bg-gray-50/50">
+            <div class="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto">
+              <i data-lucide="star" class="w-6 h-6"></i>
             </div>
-            <p class="text-xs font-semibold text-gray-700">Belum ada ulasan siswa yang masuk</p>
-            <p class="text-[11px] text-gray-400">Setiap siswa yang memberikan rating dan alasan ulasan akan tercatat rapi di sini.</p>
+            <p class="text-sm font-bold text-gray-700">Belum Ada Ulasan Siswa</p>
+            <p class="text-xs text-gray-400 max-w-sm mx-auto">Setiap kali siswa memberi rating dan alasan setelah menerima tanggapan curhat atau konseling, ulasan akan langsung muncul di sini.</p>
           </div>
         `;
       } else {
-        counselorReviewsContainer.innerHTML = reviews.map(r => {
+        container.innerHTML = filtered.map(r => {
           const dateStr = r.date ? new Date(r.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Baru saja';
           return `
-            <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-2.5">
-              <div class="flex items-center justify-between gap-2 flex-wrap">
-                <div class="flex items-center gap-1.5">
-                  <span class="text-amber-500 font-bold text-sm tracking-wider">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
-                  <span class="font-bold text-xs text-amber-900">(${r.rating}/5)</span>
-                  <span class="text-[10px] font-semibold text-heather-700 bg-white px-2 py-0.5 rounded-md border border-heather-200">${r.source}</span>
+            <div class="p-5 rounded-2xl bg-amber-50/50 hover:bg-amber-50/80 border border-amber-200/90 shadow-2xs space-y-3 transition-all flex flex-col justify-between">
+              <div class="space-y-2.5">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-amber-500 font-bold text-base tracking-wider">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+                    <span class="font-extrabold text-xs text-amber-900 bg-white px-2 py-0.5 rounded-md border border-amber-200">${r.rating}/5</span>
+                  </div>
+                  <span class="text-xs font-bold text-rose-900 bg-white px-2.5 py-1 rounded-lg border border-gray-200 font-mono shadow-2xs flex items-center gap-1">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    Nama User: <strong>s***a</strong>
+                  </span>
                 </div>
-                <span class="text-[11px] font-bold text-rose-900 bg-white px-2.5 py-0.5 rounded-md border border-gray-200 font-mono shadow-2xs">
-                  Nama User: s***a
-                </span>
+
+                <div class="p-3 rounded-xl bg-white border border-amber-100 text-xs space-y-1">
+                  <span class="font-bold text-[10px] text-amber-800 uppercase tracking-wider block flex items-center gap-1">
+                    <i data-lucide="message-square" class="w-3.5 h-3.5 text-amber-600"></i> Alasan Siswa:
+                  </span>
+                  <p class="italic text-gray-800 leading-relaxed font-medium">
+                    ${r.review ? `"${r.review}"` : '<span class="text-gray-400 font-normal">Siswa memberikan rating bintang tanpa catatan ulasan tambahan.</span>'}
+                  </p>
+                </div>
               </div>
-              <div class="p-2.5 rounded-xl bg-white border border-amber-100 text-xs space-y-1">
-                <span class="font-bold text-[10px] text-amber-800 uppercase tracking-wider block">Alasan Siswa:</span>
-                <p class="italic text-gray-800 leading-relaxed">${r.review ? `"${r.review}"` : '<span class="text-gray-400 font-normal">(Siswa memberikan rating tanpa pesan ulasan tambahan)</span>'}</p>
-              </div>
-              <div class="flex items-center justify-between text-[10px] text-gray-400 pt-1">
-                <span>Kategori: <strong>${r.category}</strong></span>
+
+              <div class="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-amber-100 flex-wrap gap-1">
+                <span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-semibold text-heather-800">${r.source} (${r.ticket})</span>
                 <span>${dateStr}</span>
               </div>
             </div>
@@ -1237,35 +1281,54 @@
         }).join('');
       }
 
+      // Filter button handlers
+      document.querySelectorAll('.review-filter-btn').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('.review-filter-btn').forEach(b => {
+            b.className = 'review-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-white border border-oase-border text-oase-muted hover:bg-gray-50 cursor-pointer';
+          });
+          btn.className = 'review-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 text-white shadow-xs cursor-pointer';
+          currentReviewFilter = btn.dataset.filter;
+          loadReviewsSection();
+        };
+      });
+
+      const refreshBtn = document.getElementById('refreshReviewsSectionBtn');
+      if (refreshBtn) {
+        refreshBtn.onclick = () => loadReviewsSection();
+      }
+
       if (window.lucide) lucide.createIcons();
     }
 
+    function openAllReviewsModal() {
+      switchCounselorTab('reviews');
+      const rSec = document.getElementById('reviewsSection');
+      if (rSec) rSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     window.openAllReviewsModal = openAllReviewsModal;
+    window.switchCounselorTab = switchCounselorTab;
+    window.loadReviewsSection = loadReviewsSection;
 
     const statCounselorRatingCard = document.getElementById('statCounselorRatingCard');
     if (statCounselorRatingCard) {
-      statCounselorRatingCard.onclick = () => openAllReviewsModal();
+      statCounselorRatingCard.onclick = () => {
+        switchCounselorTab('reviews');
+        const rSec = document.getElementById('reviewsSection');
+        if (rSec) rSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
     }
     const statCounselorRating = document.getElementById('statCounselorRating');
     if (statCounselorRating) {
       statCounselorRating.onclick = (e) => {
         e.stopPropagation();
-        openAllReviewsModal();
+        switchCounselorTab('reviews');
+        const rSec = document.getElementById('reviewsSection');
+        if (rSec) rSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
     }
 
-    document.addEventListener('click', (e) => {
-      const closeBtn = e.target.closest('#closeCounselorReviewsModalBtn, #closeCounselorReviewsFooterBtn');
-      if (closeBtn) {
-        const modal = document.getElementById('counselorReviewsModal');
-        if (modal) modal.classList.add('hidden');
-      }
-      if (e.target.id === 'counselorReviewsModal') {
-        e.target.classList.add('hidden');
-      }
-    });
-
-    // Run on start
     checkAuth();
     loadCounselorNotifs();
     loadLiveSessions();

@@ -199,9 +199,10 @@
         <span>Riwayat Sesi Selesai</span>
         <span id="historyCountBadge" class="hidden px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">0</span>
       </button>
-      <button type="button" id="tabModeAllReviews" onclick="window.openAllReviewsModal ? window.openAllReviewsModal() : null" class="px-4 py-2.5 rounded-2xl bg-white border border-amber-200 hover:bg-amber-50 text-amber-900 font-bold text-xs flex items-center justify-center sm:justify-start gap-1.5 transition-all cursor-pointer sm:ml-auto shadow-2xs">
+      <button type="button" id="tabModeReviews" class="px-5 py-2.5 rounded-2xl bg-white border border-amber-300 hover:bg-amber-50 text-amber-900 font-bold text-xs flex items-center justify-center sm:justify-start gap-2 transition-all relative cursor-pointer shadow-2xs">
         <i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-500"></i>
-        <span>Lihat Semua Ulasan Siswa</span>
+        <span>Rating Kinerja & Ulasan (s***a)</span>
+        <span id="reviewsCountBadge" class="hidden px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">0</span>
       </button>
     </div>
 
@@ -246,6 +247,79 @@
         <div id="historySessionsListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Rendered dynamically -->
         </div>
+      </div>
+    </div>
+
+    <!-- Section Evaluasi Rating & Ulasan Kinerja Siswa (Default Hidden) -->
+    <div id="reviewsSection" class="hidden space-y-6 animate-fadeIn">
+      <div class="bg-white rounded-3xl p-6 sm:p-7 border border-oase-border shadow-sm space-y-6">
+        
+        <!-- Header Section -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-oase-border">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-md shadow-amber-500/25 flex-shrink-0">
+              <i data-lucide="star" class="w-6 h-6 fill-white"></i>
+            </div>
+            <div>
+              <h2 class="text-lg sm:text-xl font-extrabold text-oase-plum flex items-center gap-2">
+                <span>Evaluasi Rating & Ulasan Siswa</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-wider">Ruang Kinerja</span>
+              </h2>
+              <p class="text-xs text-oase-muted">Daftar lengkap penilaian bintang dan alasan ulasan dari siswa (dengan identitas terlindungi: <strong class="font-mono text-rose-900">s***a</strong>).</p>
+            </div>
+          </div>
+          <button id="refreshReviewsSectionBtn" type="button" class="self-start sm:self-auto px-4 py-2 rounded-xl border border-oase-border hover:bg-amber-50 text-amber-900 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer" title="Segarkan Data Ulasan">
+            <i data-lucide="rotate-cw" class="w-4 h-4 text-amber-600"></i>
+            <span>Segarkan Ulasan</span>
+          </button>
+        </div>
+
+        <!-- Overview Score Banner -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-rose-500/10 border border-amber-200/80 flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-xl shadow-xs">
+              ⭐
+            </div>
+            <div>
+              <span id="reviewsAverageRatingDisplay" class="text-2xl font-black text-amber-600 block leading-tight">5.0</span>
+              <span class="text-[11px] font-bold text-amber-900">Rata-Rata Bintang</span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-heather-50/70 border border-heather-200/80 flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-heather-500 text-white flex items-center justify-center shadow-xs">
+              <i data-lucide="messages-square" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <span id="reviewsTotalCountDisplay" class="text-2xl font-black text-heather-700 block leading-tight">0</span>
+              <span class="text-[11px] font-bold text-heather-900">Total Ulasan Masuk</span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+              <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <span class="text-sm font-extrabold text-emerald-800 block leading-tight">Identitas Anonim</span>
+              <span class="text-[11px] font-semibold text-emerald-700">Nama User: <strong class="font-mono text-rose-900">s***a</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Ulasan -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-bold text-oase-plum">Filter Sumber:</span>
+          <button type="button" class="review-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 text-white shadow-xs cursor-pointer" data-filter="all">Semua</button>
+          <button type="button" class="review-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-white border border-oase-border text-oase-muted hover:bg-gray-50 cursor-pointer" data-filter="curhat">Curhat Anonim</button>
+          <button type="button" class="review-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-white border border-oase-border text-oase-muted hover:bg-gray-50 cursor-pointer" data-filter="live">Konseling Live</button>
+        </div>
+
+        <!-- Container Kartu-Kartu Ulasan -->
+        <div id="reviewsSectionCardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Rendered dynamically -->
+        </div>
+
       </div>
     </div>
 
