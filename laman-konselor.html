@@ -172,7 +172,7 @@
             <span id="statTotalCount" class="text-xl sm:text-2xl font-black text-heather-600 block">0</span>
             <span class="text-[10px] sm:text-[11px] font-semibold text-oase-muted">Total Kasus</span>
           </div>
-          <div id="statCounselorRatingCard" class="bg-white p-3.5 rounded-2xl border border-oase-border hover:border-amber-300 text-center shadow-xs cursor-pointer transition-all hover:bg-amber-50/40 group" title="Klik untuk melihat semua daftar ulasan & penilaian siswa">
+          <div id="statCounselorRatingCard" onclick="window.openAllReviewsModal ? window.openAllReviewsModal() : null" class="bg-white p-3.5 rounded-2xl border border-oase-border hover:border-amber-300 text-center shadow-xs cursor-pointer transition-all hover:bg-amber-50/40 group active:scale-95" title="Klik untuk melihat semua daftar ulasan & penilaian siswa">
             <span id="statCounselorRating" class="text-xl sm:text-2xl font-black text-amber-500 block group-hover:scale-105 transition-transform">⭐ 5.0</span>
             <span class="text-[10px] sm:text-[11px] font-semibold text-oase-muted flex items-center justify-center gap-1">
               <span>Rating Kinerja</span>
@@ -198,6 +198,10 @@
         <i data-lucide="history" class="w-4 h-4"></i>
         <span>Riwayat Sesi Selesai</span>
         <span id="historyCountBadge" class="hidden px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">0</span>
+      </button>
+      <button type="button" id="tabModeAllReviews" onclick="window.openAllReviewsModal ? window.openAllReviewsModal() : null" class="px-4 py-2.5 rounded-2xl bg-white border border-amber-200 hover:bg-amber-50 text-amber-900 font-bold text-xs flex items-center justify-center sm:justify-start gap-1.5 transition-all cursor-pointer sm:ml-auto shadow-2xs">
+        <i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-500"></i>
+        <span>Lihat Semua Ulasan Siswa</span>
       </button>
     </div>
 
@@ -717,12 +721,6 @@
     <span class="sm:hidden">Bantuan</span>
   </button>
 
-  <!-- Scripts -->
-  <script src="counselors.js?v=2"></script>
-  <script src="chat-session-service.js"></script>
-  <script src="notification-service.js"></script>
-  <script src="supabaseClient.js"></script>
-  <script src="laman-konselor.js"></script>
   <!-- ======================================================== -->
   <!-- MODAL: DAFTAR SEMUA ULASAN & PENILAIAN SISWA              -->
   <!-- ======================================================== -->
@@ -759,6 +757,13 @@
       </div>
     </div>
   </div>
+
+    <!-- Scripts -->
+  <script src="counselors.js?v=2"></script>
+  <script src="chat-session-service.js"></script>
+  <script src="notification-service.js"></script>
+  <script src="supabaseClient.js"></script>
+  <script src="laman-konselor.js"></script>
 </body>
 </html>
 

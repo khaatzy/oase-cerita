@@ -1142,48 +1142,53 @@
       });
     }
 
-    // ========================================================
+        // ========================================================
     // MODAL SEMUA ULASAN & PENILAIAN SISWA
     // ========================================================
-    const statCounselorRatingCard = document.getElementById('statCounselorRatingCard');
-    const counselorReviewsModal = document.getElementById('counselorReviewsModal');
-    const closeCounselorReviewsModalBtn = document.getElementById('closeCounselorReviewsModalBtn');
-    const closeCounselorReviewsFooterBtn = document.getElementById('closeCounselorReviewsFooterBtn');
-    const counselorReviewsContainer = document.getElementById('counselorReviewsContainer');
-
     function openAllReviewsModal() {
-      if (!counselorReviewsModal || !counselorReviewsContainer) return;
+      const counselorReviewsModal = document.getElementById('counselorReviewsModal');
+      const counselorReviewsContainer = document.getElementById('counselorReviewsContainer');
+      if (!counselorReviewsModal || !counselorReviewsContainer) {
+        console.warn('counselorReviewsModal not found');
+        return;
+      }
       counselorReviewsModal.classList.remove('hidden');
 
       const reviews = [];
 
       // 1. Kumpulkan dari curhat antrean yang sudah dijawab & dinilai
-      if (Array.isArray(allQueueStories)) {
-        allQueueStories.forEach(s => {
-          if (s.counselor_id === currentSession.id && s.rating) {
-            reviews.push({
-              source: 'Curhat Anonim',
-              ticket: s.ticket_code,
-              category: s.category,
-              rating: s.rating,
-              review: s.review,
-              userName: 's***a',
-              date: s.rated_at || s.replied_at || s.created_at
-            });
-          }
-        });
-      }
+      const allStories = Array.isArray(allQueueStories) && allQueueStories.length > 0 
+        ? allQueueStories 
+        : JSON.parse(localStorage.getItem('oase_counseling_submissions') || '[]');
+
+      allStories.forEach(s => {
+        const isMine = !currentSession || !currentSession.id || s.counselor_id === currentSession.id ||
+                       (s.counselor_name && currentSession.name && (s.counselor_name.includes(currentSession.name) || currentSession.name.includes(s.counselor_name)));
+        if (isMine && s.rating) {
+          reviews.push({
+            source: 'Curhat Anonim',
+            ticket: s.ticket_code,
+            category: s.category || 'Curhat Siswa',
+            rating: parseInt(s.rating) || 5,
+            review: s.review,
+            userName: 's***a',
+            date: s.rated_at || s.replied_at || s.created_at
+          });
+        }
+      });
 
       // 2. Kumpulkan dari sesi konseling live yang sudah selesai
       try {
         const liveSessions = JSON.parse(localStorage.getItem('oase_counseling_sessions') || '[]');
         liveSessions.forEach(s => {
-          if (s.counselor_id === currentSession.id && s.rating) {
+          const isMine = !currentSession || !currentSession.id || s.counselor_id === currentSession.id ||
+                         (s.counselor_name && currentSession.name && (s.counselor_name.includes(currentSession.name) || currentSession.name.includes(s.counselor_name)));
+          if (isMine && s.rating) {
             reviews.push({
               source: 'Konseling Live 30 Menit',
-              ticket: `Sesi #${s.id.substring(0, 8)}`,
-              category: s.topic,
-              rating: s.rating,
+              ticket: `Sesi #${s.id ? s.id.substring(0, 8) : 'Booking'}`,
+              category: s.topic || 'Sesi Live',
+              rating: parseInt(s.rating) || 5,
               review: s.review,
               userName: 's***a',
               date: s.rated_at || s.ended_at || s.scheduled_at
@@ -1235,21 +1240,32 @@
       if (window.lucide) lucide.createIcons();
     }
 
+    window.openAllReviewsModal = openAllReviewsModal;
+
+    const statCounselorRatingCard = document.getElementById('statCounselorRatingCard');
     if (statCounselorRatingCard) {
-      statCounselorRatingCard.addEventListener('click', openAllReviewsModal);
+      statCounselorRatingCard.onclick = () => openAllReviewsModal();
     }
-    if (closeCounselorReviewsModalBtn) {
-      closeCounselorReviewsModalBtn.addEventListener('click', () => {
-        if (counselorReviewsModal) counselorReviewsModal.classList.add('hidden');
-      });
-    }
-    if (closeCounselorReviewsFooterBtn) {
-      closeCounselorReviewsFooterBtn.addEventListener('click', () => {
-        if (counselorReviewsModal) counselorReviewsModal.classList.add('hidden');
-      });
+    const statCounselorRating = document.getElementById('statCounselorRating');
+    if (statCounselorRating) {
+      statCounselorRating.onclick = (e) => {
+        e.stopPropagation();
+        openAllReviewsModal();
+      };
     }
 
-        // Run on start
+    document.addEventListener('click', (e) => {
+      const closeBtn = e.target.closest('#closeCounselorReviewsModalBtn, #closeCounselorReviewsFooterBtn');
+      if (closeBtn) {
+        const modal = document.getElementById('counselorReviewsModal');
+        if (modal) modal.classList.add('hidden');
+      }
+      if (e.target.id === 'counselorReviewsModal') {
+        e.target.classList.add('hidden');
+      }
+    });
+
+    // Run on start
     checkAuth();
     loadCounselorNotifs();
     loadLiveSessions();
