@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/dashboard-awal.html/google40e07451e42cd776.html",
+      "destination": "/google40e07451e42cd776.html"
+    },
+    {
+      "source": "/dashboard-awal.html/(google[a-zA-Z0-9_-]+\\.html)",
+      "destination": "/$1"
+    }
+  ]
+}
