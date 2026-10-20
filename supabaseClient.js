@@ -97,15 +97,15 @@ const CrisisDetectionService = {
 
   // 4. Pola Regex Anti-Bypass & Sensor Karakter (#, *, leet-speak, spasi)
   PATTERNS: [
-    { regex: /(?:mem|di|pe)?b[u*#@o_0-9v\W_-]*n[u*#@o_0-9v\W_-]*h/i, keyword: 'bunuh', category: 'kekerasan', label: 'Pembunuhan / Ancaman Nyawa' },
-    { regex: /b[u*#@o_0-9v\W_-]*nd[i*#@!1_0-9\W_-]*r/i, keyword: 'bundir', category: 'krisis', label: 'Indikasi Bunuh Diri' },
-    { regex: /s[a*#@4_0-9\W_-]*y[a*#@4_0-9\W_-]*t/i, keyword: 'sayat', category: 'krisis', label: 'Indikasi Melukai Diri (Self-Harm)' },
-    { regex: /k[a*#@4_0-9\W_-]*f[i*#@!1_0-9\W_-]*r/i, keyword: 'kafir', category: 'sara', label: 'Ujaran Kebencian / SARA (Agama)' },
-    { regex: /g[o*#@0_0-9\W_-]*r[o*#@0_0-9\W_-]*k/i, keyword: 'gorok', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
-    { regex: /b[a*#@4_0-9\W_-]*nt[a*#@4_0-9\W_-]*i/i, keyword: 'bantai', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
-    { regex: /m[u*#@o_0-9v\W_-]*t[i*#@!1_0-9\W_-]*l[a*#@4_0-9\W_-]*s[i*#@!1_0-9\W_-]*/i, keyword: 'mutilasi', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
-    { regex: /c[o*#@0_0-9\W_-]*k[i*#@!1_0-9\W_-]*n/i, keyword: 'cokin', category: 'sara', label: 'Ujaran Kebencian / SARA (Ras/Etnis)' },
-    { regex: /\b(?:n[e3*#@_0-9]*gr[o0*#@_0-9]+|n[i1*#@!_0-9]*gg[a4e3*#@_0-9]+)\b/i, keyword: 'negro/nigger', category: 'sara', label: 'Ujaran Kebencian / SARA (Ras)' }
+    { regex: /(?:^|[^\p{L}\p{N}])(?:(?:mem|di|pe)?b[u*#@o0_-]*n[u*#@o0_-]*h)(?=$|[^\p{L}\p{N}])/iu, keyword: 'bunuh', category: 'kekerasan', label: 'Pembunuhan / Ancaman Nyawa' },
+    { regex: /(?:^|[^\p{L}\p{N}])(?:b[u*#@o0_-]*nd[i*#@!1_-]*r)(?=$|[^\p{L}\p{N}])/iu, keyword: 'bundir', category: 'krisis', label: 'Indikasi Bunuh Diri' },
+    { regex: /(?:^|[^\p{L}\p{N}])(?:(?:menyayat|disayat|tersayat|sayatan|sayat)|s[a@4*._-]*y[a@4*._-]*t|s[*#@._-]*y[*#@._-]*t)(?=$|[^\p{L}\p{N}])/iu, keyword: 'sayat', category: 'krisis', label: 'Indikasi Melukai Diri (Self-Harm)' },
+    { regex: /(?:^|[^\p{L}\p{N}])(?:k[a*#@4_-]*f[i*#@!1_-]*r)(?=$|[^\p{L}\p{N}])/iu, keyword: 'kafir', category: 'sara', label: 'Ujaran Kebencian / SARA (Agama)' },
+    { regex: /(?:^|[^\p{L}\p{N}])(?:g[o*#@0_-]*r[o*#@0_-]*k)(?=$|[^\p{L}\p{N}])/iu, keyword: 'gorok', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
+    { regex: /(?:^|[^\p{L}\p{N}])(?:b[a*#@4_-]*nt[a*#@4_-]*i)(?=$|[^\p{L}\p{N}])/iu, keyword: 'bantai', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
+    { regex: /(?:^|[^\p{L}\p{N}])(?:m[u*#@o0_-]*t[i*#@!1_-]*l[a*#@4_-]*s[i*#@!1_-]*)(?=$|[^\p{L}\p{N}])/iu, keyword: 'mutilasi', category: 'kekerasan', label: 'Kekerasan Ekstrem' },
+    { regex: /(?:^|[^\p{L}\p{N}])(?:c[o*#@0_-]*k[i*#@!1_-]*n)(?=$|[^\p{L}\p{N}])/iu, keyword: 'cokin', category: 'sara', label: 'Ujaran Kebencian / SARA (Ras/Etnis)' },
+    { regex: /(?:^|[^\p{L}\p{N}])(?:n[e3*#@_-]*gr[o0*#@_-]+|n[i1*#@!_-]*gg[a4e3*#@_-]+)(?=$|[^\p{L}\p{N}])/iu, keyword: 'negro/nigger', category: 'sara', label: 'Ujaran Kebencian / SARA (Ras)' }
   ],
 
   escapeRegex(str) {
@@ -169,13 +169,18 @@ const CrisisDetectionService = {
       const matchRaw = raw.match(p.regex);
       const matchNorm = normalized.match(p.regex);
       if (matchRaw || matchNorm) {
-        const detected = (matchRaw && matchRaw[0]) || (matchNorm && matchNorm[0]) || p.keyword;
+        let detected = (matchRaw && matchRaw[0]) || (matchNorm && matchNorm[0]) || p.keyword;
+        try {
+          detected = detected.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').trim() || p.keyword;
+        } catch(e) {
+          detected = detected.trim();
+        }
         return {
-          isCrisis: true, // Untuk kompatibilitas kode lama
+          isCrisis: p.category === 'krisis',
           isSara: p.category === 'sara',
           isViolation: true,
           category: p.category,
-          matchedKeyword: detected.trim(),
+          matchedKeyword: detected,
           label: p.label
         };
       }
@@ -913,9 +918,15 @@ const CounselingService = {
       } catch (e) {}
     }
 
-    const isSara = auditData.is_sara !== undefined ? auditData.is_sara : crisisCheck.isSara;
-    const flaggedWords = auditData.flagged_words || crisisCheck.matchedKeyword || null;
-    const hasViolation = !!(isSara || flaggedWords || isCrisis);
+    // Deteksi & eliminasi false-positive historis (seperti "saya t" yang timbul dari kata "saya tanggap/terkesan")
+    let rawFlagged = auditData.flagged_words || crisisCheck.matchedKeyword || null;
+    if (rawFlagged === 'saya t' && !crisisCheck.isViolation) {
+      rawFlagged = null;
+    }
+    const isSara = crisisCheck.isViolation ? crisisCheck.isSara : (rawFlagged ? (auditData.is_sara !== undefined ? auditData.is_sara : crisisCheck.isSara) : false);
+    const flaggedWords = crisisCheck.isViolation ? (crisisCheck.matchedKeyword || rawFlagged) : rawFlagged;
+    const finalIsCrisis = crisisCheck.isViolation ? crisisCheck.isCrisis : (rawFlagged ? (item.is_crisis || crisisCheck.isCrisis) : false);
+    const hasViolation = !!(isSara || flaggedWords || finalIsCrisis);
 
     // Informasi akun HANYA diekspos jika terdeteksi SARA / krisis
     const userEmail = hasViolation ? (item.user_email || auditData.user_email || null) : null;
@@ -926,9 +937,9 @@ const CounselingService = {
       counselor_name: name,
       story_content: decContent,
       counselor_reply: decReply,
-      is_crisis: isCrisis,
+      is_crisis: finalIsCrisis,
       is_sara: isSara,
-      priority: isCrisis ? 'krisis' : (item.priority || 'normal'),
+      priority: finalIsCrisis ? 'krisis' : (item.priority || 'normal'),
       user_email: userEmail,
       real_name: userRealName,
       flagged_words: flaggedWords,

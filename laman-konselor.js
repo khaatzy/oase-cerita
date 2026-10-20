@@ -324,7 +324,7 @@
 
             ${(story.flagged_words || story.is_sara) ? `
               <div class="flex items-center gap-2 flex-wrap text-[11px] bg-rose-50/80 p-2 rounded-xl border border-rose-200 text-rose-900">
-                <span class="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-extrabold flex items-center gap-1">⚠️ SARA Terdeteksi: "${story.flagged_words}"</span>
+                <span class="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-extrabold flex items-center gap-1">${story.is_sara ? '⚠️ SARA Terdeteksi' : (story.is_crisis ? '⚠️ Krisis Terdeteksi' : '⚠️ Pelanggaran Terdeteksi')}: "${story.flagged_words}"</span>
                 ${story.user_email ? `<span class="flex items-center gap-1 font-medium"><i data-lucide="mail" class="w-3 h-3 text-rose-700"></i> <strong class="text-oase-plum">${story.user_email}</strong></span>` : ''}
               </div>
             ` : ''}
@@ -888,7 +888,7 @@
             ${timeInfo}
           </div>
           <div class="flex items-center gap-2">
-            <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA terdeteksi)">${s.user_email}</span>` : ''}
+            <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA/Krisis terdeteksi)">${s.user_email}</span>` : ''}
             <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold">🔒 Anonim</span>
           </div>
           <p class="text-xs text-heather-700 font-semibold bg-heather-50 p-2 rounded-xl border border-heather-100">Topik: ${s.topic}</p>
@@ -983,7 +983,7 @@
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA terdeteksi)">${s.user_email}</span>` : ''}
+                <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA/Krisis terdeteksi)">${s.user_email}</span>` : ''}
                 <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold">🔒 Anonim</span>
               </div>
               <p class="text-xs text-heather-700 font-semibold mt-0.5">Topik: ${s.topic}</p>
