@@ -956,9 +956,44 @@ const CounselingService = {
     const userEmail = hasViolation ? (item.user_email || auditData.user_email || null) : null;
     const userRealName = hasViolation ? (item.real_name || auditData.real_name || null) : null;
 
-    const rating = item.rating || auditData.rating || null;
-    const review = item.review || auditData.review || null;
-    const ratedAt = item.rated_at || auditData.rated_at || null;
+    let subRating = item.rating || auditData.rating || null;
+    let subReview = item.review || auditData.review || null;
+    let subRatedAt = item.rated_at || auditData.rated_at || null;
+
+    // Sinkronisasi lokal jika rating belum tercermin di kolom database
+    if (!subRating && item.ticket_code) {
+      const codeUpper = item.ticket_code.trim().toUpperCase();
+      try {
+        const subRatings = JSON.parse(localStorage.getItem('oase_submission_ratings') || '{}');
+        if (subRatings[codeUpper] && subRatings[codeUpper].rating) {
+          subRating = subRatings[codeUpper].rating;
+          subReview = subRatings[codeUpper].review || '';
+          subRatedAt = subRatings[codeUpper].rated_at || null;
+        }
+      } catch(e) {}
+      if (!subRating) {
+        try {
+          const mySubs = JSON.parse(localStorage.getItem('oase_my_anon_stories') || '[]');
+          const mMatch = mySubs.find(s => (s.ticket_code || '').toUpperCase() === codeUpper);
+          if (mMatch && mMatch.rating) {
+            subRating = mMatch.rating;
+            subReview = mMatch.review || '';
+            subRatedAt = mMatch.rated_at || null;
+          }
+        } catch(e) {}
+      }
+      if (!subRating) {
+        try {
+          const localSubs = JSON.parse(localStorage.getItem('oase_counseling_submissions') || '[]');
+          const lMatch = localSubs.find(s => (s.ticket_code || '').toUpperCase() === codeUpper);
+          if (lMatch && lMatch.rating) {
+            subRating = lMatch.rating;
+            subReview = lMatch.review || '';
+            subRatedAt = lMatch.rated_at || null;
+          }
+        } catch(e) {}
+      }
+    }
 
     return {
       ...item,
@@ -971,6 +1006,9 @@ const CounselingService = {
       user_email: userEmail,
       real_name: userRealName,
       flagged_words: flaggedWords,
+      rating: subRating,
+      review: subReview,
+      rated_at: subRatedAt,
       transfer_reason: (item.transfer_reason && item.transfer_reason.startsWith('{')) ? null : item.transfer_reason
     };
   },
@@ -1169,16 +1207,41 @@ const CounselingService = {
       }
     }
 
-    // 2. Simpan di localStorage 'oase_counseling_submissions'
+    // 2. Simpan di dedicated map 'oase_submission_ratings'
+    try {
+      const subRatings = JSON.parse(localStorage.getItem('oase_submission_ratings') || '{}');
+      subRatings[cleanCode] = {
+        rating: starNum,
+        review: reviewText.trim(),
+        rated_at: now,
+        counselor_id: counselorId || null
+      };
+      localStorage.setItem('oase_submission_ratings', JSON.stringify(subRatings));
+    } catch(e) {}
+
+    // 2b. Simpan di localStorage 'oase_counseling_submissions'
     try {
       const local = JSON.parse(localStorage.getItem('oase_counseling_submissions') || '[]');
-      const idx = local.findIndex(s => s.ticket_code === cleanCode);
+      const idx = local.findIndex(s => (s.ticket_code || '').toUpperCase() === cleanCode);
       if (idx !== -1) {
         local[idx].rating = starNum;
         local[idx].review = reviewText.trim();
         local[idx].rated_at = now;
         if (!counselorId) counselorId = local[idx].counselor_id;
         localStorage.setItem('oase_counseling_submissions', JSON.stringify(local));
+      } else {
+        const myStories = JSON.parse(localStorage.getItem('oase_my_anon_stories') || '[]');
+        const m = myStories.find(s => (s.ticket_code || '').toUpperCase() === cleanCode);
+        if (m) {
+          local.unshift({
+            ...m,
+            rating: starNum,
+            review: reviewText.trim(),
+            rated_at: now
+          });
+          if (!counselorId) counselorId = m.counselor_id;
+          localStorage.setItem('oase_counseling_submissions', JSON.stringify(local));
+        }
       }
     } catch(e) {}
 

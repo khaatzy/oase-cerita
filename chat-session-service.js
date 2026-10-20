@@ -471,6 +471,18 @@ const ChatSessionService = {
       const ratedAnon = anonSubmissions.filter(s => s.counselor_id === counselorId && s.rating);
       totalScore += ratedAnon.reduce((acc, curr) => acc + (curr.rating || 5), 0);
       totalCount += ratedAnon.length;
+
+      const subRatings = JSON.parse(localStorage.getItem('oase_submission_ratings') || '{}');
+      Object.keys(subRatings).forEach(t => {
+        const item = subRatings[t];
+        if (item && item.counselor_id === counselorId && item.rating) {
+          const already = anonSubmissions.some(s => (s.ticket_code || '').toUpperCase() === t && s.rating);
+          if (!already) {
+            totalScore += parseInt(item.rating) || 5;
+            totalCount++;
+          }
+        }
+      });
     } catch (e) {}
     const baseCount = 5;
     const baseScore = 25;

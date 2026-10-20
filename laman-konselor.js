@@ -204,6 +204,7 @@
         }
 
         renderQueue();
+        loadReviewsSection();
       } catch (err) {
         console.error('Gagal mengambil antrean:', err);
         queueContainer.innerHTML = `<div class="col-span-full text-center py-10 text-red-500 text-sm">Gagal memuat antrean cerita. Silakan coba lagi.</div>`;
@@ -453,6 +454,29 @@
       // Tampilkan penilaian siswa jika sudah dinilai
       const ratingBox = document.getElementById('modalStoryRatingBox');
       if (ratingBox) {
+        // Sinkronisasi rating lokal jika belum ada di objek story
+        if (!story.rating && story.ticket_code) {
+          const codeUpper = story.ticket_code.trim().toUpperCase();
+          try {
+            const subRatings = JSON.parse(localStorage.getItem('oase_submission_ratings') || '{}');
+            if (subRatings[codeUpper] && subRatings[codeUpper].rating) {
+              story.rating = subRatings[codeUpper].rating;
+              story.review = subRatings[codeUpper].review || '';
+              story.rated_at = subRatings[codeUpper].rated_at || null;
+            }
+          } catch(e) {}
+          if (!story.rating) {
+            try {
+              const mySubs = JSON.parse(localStorage.getItem('oase_my_anon_stories') || '[]');
+              const mMatch = mySubs.find(s => (s.ticket_code || '').toUpperCase() === codeUpper);
+              if (mMatch && mMatch.rating) {
+                story.rating = mMatch.rating;
+                story.review = mMatch.review || '';
+                story.rated_at = mMatch.rated_at || null;
+              }
+            } catch(e) {}
+          }
+        }
         if (story.rating) {
           ratingBox.classList.remove('hidden');
           ratingBox.innerHTML = `
@@ -1177,12 +1201,53 @@
 
       const reviews = [];
 
-      // 1. Kumpulkan dari antrean curhat
-      const allStories = Array.isArray(allQueueStories) && allQueueStories.length > 0 
-        ? allQueueStories 
-        : JSON.parse(localStorage.getItem('oase_counseling_submissions') || '[]');
+      // 1. Kumpulkan dari antrean curhat + localStorage ratings
+      let submissionRatingsMap = {};
+      try {
+        submissionRatingsMap = JSON.parse(localStorage.getItem('oase_submission_ratings') || '{}');
+      } catch(e) {}
+      let myStoriesList = [];
+      try {
+        myStoriesList = JSON.parse(localStorage.getItem('oase_my_anon_stories') || '[]');
+      } catch(e) {}
+      let localSubmissions = [];
+      try {
+        localSubmissions = JSON.parse(localStorage.getItem('oase_counseling_submissions') || '[]');
+      } catch(e) {}
 
-      allStories.forEach(s => {
+      // Gabungkan cerita unik
+      const storyMap = new Map();
+      (Array.isArray(allQueueStories) ? allQueueStories : []).forEach(s => {
+        if (s && s.ticket_code) storyMap.set(s.ticket_code.toUpperCase(), { ...s });
+      });
+      localSubmissions.forEach(s => {
+        if (s && s.ticket_code && !storyMap.has(s.ticket_code.toUpperCase())) {
+          storyMap.set(s.ticket_code.toUpperCase(), { ...s });
+        }
+      });
+      myStoriesList.forEach(s => {
+        if (s && s.ticket_code && !storyMap.has(s.ticket_code.toUpperCase())) {
+          storyMap.set(s.ticket_code.toUpperCase(), { ...s });
+        }
+      });
+
+      storyMap.forEach(s => {
+        const tCode = (s.ticket_code || '').toUpperCase();
+        if (submissionRatingsMap[tCode]) {
+          s.rating = s.rating || submissionRatingsMap[tCode].rating;
+          s.review = s.review || submissionRatingsMap[tCode].review || '';
+          s.rated_at = s.rated_at || submissionRatingsMap[tCode].rated_at;
+          if (!s.counselor_id && submissionRatingsMap[tCode].counselor_id) {
+            s.counselor_id = submissionRatingsMap[tCode].counselor_id;
+          }
+        }
+        const m = myStoriesList.find(item => item.ticket_code && item.ticket_code.toUpperCase() === tCode);
+        if (m && m.rating) {
+          s.rating = s.rating || m.rating;
+          s.review = s.review || m.review || '';
+          s.rated_at = s.rated_at || m.rated_at;
+        }
+
         const isMine = !currentSession || !currentSession.id || s.counselor_id === currentSession.id ||
                        (s.counselor_name && currentSession.name && (s.counselor_name.includes(currentSession.name) || currentSession.name.includes(s.counselor_name)));
         if (isMine && s.rating) {
@@ -1231,6 +1296,10 @@
         const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
         const avg = (totalRating / reviews.length).toFixed(1);
         if (avgDisplay) avgDisplay.textContent = avg;
+        const statCounselorRating = document.getElementById('statCounselorRating');
+        if (statCounselorRating) statCounselorRating.textContent = "\u2B50 " + avg;
+        const navCounselorRole = document.getElementById('navCounselorRole');
+        if (navCounselorRole && currentSession) navCounselorRole.textContent = "\u2B50 " + avg + " \u2022 " + (currentSession.email || "Konselor OASE");
       } else {
         if (avgDisplay) avgDisplay.textContent = '5.0';
       }
@@ -1306,7 +1375,7 @@
 
       const refreshBtn = document.getElementById('refreshReviewsSectionBtn');
       if (refreshBtn) {
-        refreshBtn.onclick = () => loadReviewsSection();
+        refreshBtn.onclick = async () => { await loadQueue(); loadReviewsSection(); };
       }
 
       if (window.lucide) lucide.createIcons();
