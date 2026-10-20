@@ -459,7 +459,7 @@
                   </div>
                 </div>
                 <span class="px-3 py-1 rounded-lg bg-white border border-amber-200 font-bold text-xs text-rose-900 shadow-2xs font-mono">
-                  Nama User: <strong>s***a</strong>
+                  Nama User: <strong>${story.author_name || 'Sahabat Anonim'}</strong>
                 </span>
               </div>
               <div class="p-3 rounded-xl bg-white/95 border border-amber-100 text-xs space-y-1">
@@ -479,7 +479,7 @@
               <span class="text-gray-500 flex items-center gap-1.5 font-medium">
                 <i data-lucide="clock" class="w-4 h-4 text-gray-400"></i> Belum ada rating atau ulasan dari siswa untuk tiket ini.
               </span>
-              <span class="font-bold text-gray-600 bg-white px-2.5 py-0.5 rounded-md border border-gray-200 font-mono text-[11px]">Nama User: s***a</span>
+              <span class="font-bold text-gray-600 bg-white px-2.5 py-0.5 rounded-md border border-gray-200 font-mono text-[11px]">Nama User: ${story.author_name || 'Sahabat Anonim'}</span>
             </div>
           `;
         } else {
@@ -956,7 +956,7 @@
             ${timeInfo}
           </div>
           <div class="flex items-center gap-2">
-            <h3 class="text-sm font-extrabold text-oase-plum">s***a</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA/Krisis terdeteksi)">${s.user_email}</span>` : ''}
+            <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Sahabat Anonim'}</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA/Krisis terdeteksi)">${s.user_email}</span>` : ''}
             <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold">🔒 Anonim</span>
           </div>
           <p class="text-xs text-heather-700 font-semibold bg-heather-50 p-2 rounded-xl border border-heather-100">Topik: ${s.topic}</p>
@@ -1051,7 +1051,7 @@
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h3 class="text-sm font-extrabold text-oase-plum">s***a</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA/Krisis terdeteksi)">${s.user_email}</span>` : ''}
+                <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Sahabat Anonim'}</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA/Krisis terdeteksi)">${s.user_email}</span>` : ''}
                 <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold">🔒 Anonim</span>
               </div>
               <p class="text-xs text-heather-700 font-semibold mt-0.5">Topik: ${s.topic}</p>
@@ -1182,7 +1182,7 @@
             category: s.category || 'Curhat Siswa',
             rating: parseInt(s.rating) || 5,
             review: s.review || '',
-            userName: 's***a',
+            userName: s.author_name || 'Sahabat Anonim',
             date: s.rated_at || s.replied_at || s.created_at
           });
         }
@@ -1198,11 +1198,11 @@
             reviews.push({
               type: 'live',
               source: 'Konseling Live 30 Menit',
-              ticket: `Sesi #${s.id ? s.id.substring(0, 8) : 'Booking'}`,
+              ticket: '',
               category: s.topic || 'Sesi Live',
               rating: parseInt(s.rating) || 5,
               review: s.review || '',
-              userName: 's***a',
+              userName: s.user_name || 'Sahabat Anonim',
               date: s.rated_at || s.ended_at || s.scheduled_at
             });
           }
@@ -1257,8 +1257,8 @@
                     <span class="font-extrabold text-xs text-amber-900 bg-white px-2 py-0.5 rounded-md border border-amber-200">${r.rating}/5</span>
                   </div>
                   <span class="text-xs font-bold text-rose-900 bg-white px-2.5 py-1 rounded-lg border border-gray-200 font-mono shadow-2xs flex items-center gap-1">
-                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
-                    Nama User: <strong>s***a</strong>
+                    <i data-lucide="user-check" class="w-3.5 h-3.5 text-heather-600"></i>
+                    Nama User: <strong>${r.userName || 'Sahabat Anonim'}</strong>
                   </span>
                 </div>
 
@@ -1273,7 +1273,7 @@
               </div>
 
               <div class="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-amber-100 flex-wrap gap-1">
-                <span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-semibold text-heather-800">${r.source} (${r.ticket})</span>
+                <span class="px-2 py-0.5 rounded-md bg-white border border-gray-200 font-semibold text-heather-800">${r.source}${r.ticket && !r.ticket.includes('session-') ? ` (${r.ticket})` : ''}</span>
                 <span>${dateStr}</span>
               </div>
             </div>
