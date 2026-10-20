@@ -327,7 +327,157 @@
       const closeAnonSuccessModalBtn = document.getElementById('closeAnonSuccessModalBtn');
       const anonTicketCodeDisplay = document.getElementById('anonTicketCodeDisplay');
 
-      function openCheckModal(codeToSearch = '') {
+      // Elemen Tab Riwayat Curhat
+      const curhatTabSearchBtn = document.getElementById('curhatTabSearchBtn');
+      const curhatTabHistoryBtn = document.getElementById('curhatTabHistoryBtn');
+      const curhatMyHistoryCountBadge = document.getElementById('curhatMyHistoryCountBadge');
+      const curhatSearchPanel = document.getElementById('curhatSearchPanel');
+      const curhatHistoryPanel = document.getElementById('curhatHistoryPanel');
+      const refreshCurhatHistoryBtn = document.getElementById('refreshCurhatHistoryBtn');
+      const curhatHistoryList = document.getElementById('curhatHistoryList');
+      const closeCheckTicketFooterBtn = document.getElementById('closeCheckTicketFooterBtn');
+
+      function switchCurhatTab(tab) {
+        if (tab === 'search') {
+          if (curhatTabSearchBtn) {
+            curhatTabSearchBtn.className = "py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-white text-rose-900 shadow-2xs border border-rose-200";
+          }
+          if (curhatTabHistoryBtn) {
+            curhatTabHistoryBtn.className = "py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 text-gray-600 hover:text-rose-900";
+          }
+          if (curhatSearchPanel) curhatSearchPanel.classList.remove('hidden');
+          if (curhatHistoryPanel) curhatHistoryPanel.classList.add('hidden');
+        } else {
+          if (curhatTabHistoryBtn) {
+            curhatTabHistoryBtn.className = "py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-white text-rose-900 shadow-2xs border border-rose-200";
+          }
+          if (curhatTabSearchBtn) {
+            curhatTabSearchBtn.className = "py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 text-gray-600 hover:text-rose-900";
+          }
+          if (curhatHistoryPanel) curhatHistoryPanel.classList.remove('hidden');
+          if (curhatSearchPanel) curhatSearchPanel.classList.add('hidden');
+          renderCurhatHistoryList();
+        }
+        if (window.lucide) lucide.createIcons();
+      }
+
+      async function renderCurhatHistoryList() {
+        if (!curhatHistoryList) return;
+
+        curhatHistoryList.innerHTML = `
+          <div class="p-8 text-center text-xs text-gray-500">
+            <i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto mb-2 text-rose-600"></i>
+            <span>Memuat riwayat curhat Anda...</span>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+
+        let stories = [];
+        try {
+          if (window.CounselingService && typeof window.CounselingService.getMySubmissions === 'function') {
+            stories = await window.CounselingService.getMySubmissions();
+          } else {
+            stories = JSON.parse(localStorage.getItem('oase_my_anon_stories') || '[]');
+          }
+        } catch(e) {
+          stories = JSON.parse(localStorage.getItem('oase_my_anon_stories') || '[]');
+        }
+
+        if (curhatMyHistoryCountBadge) {
+          curhatMyHistoryCountBadge.textContent = stories.length;
+        }
+
+        if (!stories || stories.length === 0) {
+          curhatHistoryList.innerHTML = `
+            <div class="p-8 rounded-2xl border-2 border-dashed border-gray-200 text-center space-y-2 bg-gray-50/50">
+              <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+              </div>
+              <p class="text-xs font-semibold text-gray-700">Belum ada riwayat curhat</p>
+              <p class="text-[11px] text-gray-400">Curhat yang kamu kirimkan melalui perangkat atau akun ini akan otomatis tercatat di sini.</p>
+            </div>
+          `;
+          if (window.lucide) lucide.createIcons();
+          return;
+        }
+
+        curhatHistoryList.innerHTML = stories.map(s => {
+          const isReplied = !!(s.counselor_reply && s.counselor_reply.trim() !== '');
+          const statusBadge = isReplied
+            ? `<span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"></i> Sudah Dibalas</span>`
+            : `<span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3 text-amber-600"></i> Menunggu Tanggapan</span>`;
+
+          const dateStr = s.created_at
+            ? new Date(s.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : 'Baru saja';
+
+          const snippet = (s.story_content || '').substring(0, 110);
+
+          return `
+            <div class="history-curhat-item p-4 rounded-2xl border border-gray-200 hover:border-rose-300 bg-white hover:bg-rose-50/20 transition-all shadow-2xs space-y-2.5 cursor-pointer text-left" data-ticket="${s.ticket_code}">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-mono text-xs font-extrabold text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">${s.ticket_code}</span>
+                  <button type="button" class="copy-curhat-ticket-btn p-1 text-gray-400 hover:text-rose-700 rounded-md hover:bg-rose-100/50 transition-colors" data-code="${s.ticket_code}" title="Salin Kode Tiket">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+                ${statusBadge}
+              </div>
+
+              <div class="flex items-center gap-2 text-[11px] text-gray-500 flex-wrap">
+                <span class="font-bold text-gray-700 flex items-center gap-1"><i data-lucide="tag" class="w-3 h-3 text-rose-500"></i> ${s.category || 'Curhat'}</span>
+                <span>•</span>
+                <span class="flex items-center gap-1"><i data-lucide="user-check" class="w-3 h-3 text-heather-500"></i> ${s.counselor_name || 'Konselor OASE'}</span>
+                <span>•</span>
+                <span>${dateStr}</span>
+              </div>
+
+              <p class="text-xs text-gray-600 line-clamp-2 italic leading-relaxed bg-gray-50/60 p-2.5 rounded-xl border border-gray-100">
+                "${snippet}${snippet.length >= 110 ? '...' : ''}"
+              </p>
+
+              ${isReplied ? `
+                <div class="p-2.5 rounded-xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between">
+                  <span class="flex items-center gap-1 font-bold"><i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i> Konselor telah membalas!</span>
+                  <span class="text-[11px] font-bold text-emerald-700 underline flex items-center gap-0.5">Baca Jawaban &rarr;</span>
+                </div>
+              ` : `
+                <div class="text-[11px] text-amber-700 flex items-center gap-1">
+                  <i data-lucide="hourglass" class="w-3 h-3"></i>
+                  <span>Sedang dalam antrean penelaahan konselor</span>
+                </div>
+              `}
+            </div>
+          `;
+        }).join('');
+
+        curhatHistoryList.querySelectorAll('.history-curhat-item').forEach(card => {
+          card.onclick = (e) => {
+            if (e.target.closest('.copy-curhat-ticket-btn')) return;
+            const ticketCode = card.dataset.ticket;
+            switchCurhatTab('search');
+            if (searchTicketInput) searchTicketInput.value = ticketCode;
+            searchTicket();
+          };
+        });
+
+        curhatHistoryList.querySelectorAll('.copy-curhat-ticket-btn').forEach(btn => {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            const code = btn.dataset.code;
+            navigator.clipboard.writeText(code).then(() => {
+              alert(`Kode tiket ${code} berhasil disalin!`);
+            });
+          };
+        });
+
+        if (window.lucide) lucide.createIcons();
+      }
+
+function openCheckModal(codeToSearch = '') {
+        switchCurhatTab('search');
+        if (window.CounselingService && typeof window.CounselingService.getMySubmissions === 'function') { window.CounselingService.getMySubmissions().then(stories => { if (curhatMyHistoryCountBadge) curhatMyHistoryCountBadge.textContent = stories.length; }).catch(() => {}); }
         if (!checkTicketModal) return;
         checkTicketModal.classList.remove('hidden');
         if (ticketResultBox) ticketResultBox.classList.add('hidden');
@@ -454,6 +604,13 @@
       if (closeCheckTicketModalBtn) closeCheckTicketModalBtn.addEventListener('click', () => {
         if (checkTicketModal) checkTicketModal.classList.add('hidden');
       });
+      if (closeCheckTicketFooterBtn) closeCheckTicketFooterBtn.addEventListener('click', () => {
+        if (checkTicketModal) checkTicketModal.classList.add('hidden');
+      });
+
+      if (curhatTabSearchBtn) curhatTabSearchBtn.addEventListener('click', () => switchCurhatTab('search'));
+      if (curhatTabHistoryBtn) curhatTabHistoryBtn.addEventListener('click', () => switchCurhatTab('history'));
+      if (refreshCurhatHistoryBtn) refreshCurhatHistoryBtn.addEventListener('click', () => renderCurhatHistoryList());
 
       if (searchTicketBtn) searchTicketBtn.addEventListener('click', searchTicket);
       if (searchTicketInput) {

@@ -888,6 +888,30 @@ const CounselingService = {
       return { success: true, ticketCode, data: submissionData, fallback: true };
     }
 
+    // Simpan otomatis ke riwayat curhat perangkat pengguna (tiket & cerita)
+    try {
+      let savedTickets = JSON.parse(localStorage.getItem('oase_my_anon_tickets') || '[]');
+      if (!savedTickets.includes(ticketCode)) {
+        savedTickets.unshift(ticketCode);
+        localStorage.setItem('oase_my_anon_tickets', JSON.stringify(savedTickets.slice(0, 30)));
+      }
+      let myStories = JSON.parse(localStorage.getItem('oase_my_anon_stories') || '[]');
+      myStories = myStories.filter(s => s.ticket_code !== ticketCode);
+      myStories.unshift({
+        ticket_code: ticketCode,
+        author_name: finalAuthorName,
+        education_level: educationLevel,
+        grade_class: gradeClass ? gradeClass.trim() : null,
+        category: category,
+        counselor_name: counselorName,
+        counselor_id: counselorId,
+        story_content: storyContent,
+        status: 'menunggu_tanggapan',
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem('oase_my_anon_stories', JSON.stringify(myStories.slice(0, 30)));
+    } catch (e) {}
+
     return { success: true, ticketCode, data: data?.[0] || submissionData };
   },
 
@@ -972,6 +996,91 @@ const CounselingService = {
     const localStories = JSON.parse(localStorage.getItem('oase_counseling_submissions') || '[]');
     const found = localStories.find(s => s.ticket_code === cleanCode) || null;
     return this._resolveSubmission(found);
+  },
+
+  // Dapatkan seluruh riwayat curhat siswa (berdasarkan tiket lokal & akun pengguna)
+  async getMySubmissions() {
+    let savedTickets = [];
+    try {
+      savedTickets = JSON.parse(localStorage.getItem('oase_my_anon_tickets') || '[]');
+    } catch(e) {}
+
+    let localStories = [];
+    try {
+      localStories = JSON.parse(localStorage.getItem('oase_my_anon_stories') || '[]');
+    } catch(e) {}
+
+    let userEmail = '';
+    try {
+      const activeUser = JSON.parse(localStorage.getItem('oase_active_user') || 'null');
+      userEmail = (activeUser && activeUser.email) ? activeUser.email.toLowerCase().trim() : (localStorage.getItem('oase_active_user_email') || '').toLowerCase().trim();
+    } catch(e) {}
+
+    const storiesMap = new Map();
+
+    // 1. Masukkan cache riwayat cerita lokal terlebih dahulu
+    localStories.forEach(s => {
+      if (s && s.ticket_code) storiesMap.set(s.ticket_code, s);
+    });
+
+    // 2. Query dari Supabase jika ada tiket atau email
+    if (supabaseClient) {
+      if (savedTickets.length > 0) {
+        try {
+          const { data, error } = await supabaseClient
+            .from('counseling_submissions')
+            .select('*')
+            .in('ticket_code', savedTickets.slice(0, 30));
+          if (!error && data) {
+            data.forEach(item => {
+              const res = this._resolveSubmission(item);
+              storiesMap.set(res.ticket_code, res);
+            });
+          }
+        } catch(e) {}
+      }
+
+      if (userEmail) {
+        try {
+          const { data, error } = await supabaseClient
+            .from('counseling_submissions')
+            .select('*')
+            .ilike('transfer_reason', `%${userEmail}%`)
+            .order('created_at', { ascending: false })
+            .limit(30);
+          if (!error && data) {
+            data.forEach(item => {
+              const res = this._resolveSubmission(item);
+              storiesMap.set(res.ticket_code, res);
+            });
+          }
+        } catch(e) {}
+      }
+    }
+
+    // 3. Fallback jika ada tiket di savedTickets yang belum terload
+    for (const code of savedTickets) {
+      if (!storiesMap.has(code)) {
+        try {
+          const item = await this.getSubmissionByTicket(code);
+          if (item) storiesMap.set(code, item);
+        } catch(e) {}
+      }
+    }
+
+    // 4. Fallback localStorage umum 'oase_counseling_submissions'
+    try {
+      const fallbackList = JSON.parse(localStorage.getItem('oase_counseling_submissions') || '[]');
+      fallbackList.forEach(item => {
+        if (savedTickets.includes(item.ticket_code) && !storiesMap.has(item.ticket_code)) {
+          storiesMap.set(item.ticket_code, this._resolveSubmission(item));
+        }
+      });
+    } catch(e) {}
+
+    const result = Array.from(storiesMap.values());
+    result.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    return result;
   },
 
   // Dapatkan seluruh antrean cerita konseling (filter kategori & status)
