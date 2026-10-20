@@ -346,6 +346,16 @@
             ` : ''}
           </div>
 
+            ${isAnswered && story.rating ? `
+              <div class="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-2 flex-wrap">
+                <span class="flex items-center gap-1 font-bold">
+                  <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 text-amber-500"></i>
+                  Rating Siswa: ${'★'.repeat(story.rating)}${'☆'.repeat(5 - story.rating)} (${story.rating}/5)
+                </span>
+                ${story.review ? `<span class="italic text-[11px] text-amber-800 truncate max-w-[220px]">"${story.review}"</span>` : ''}
+              </div>
+            ` : ''}
+
           <div class="pt-3 border-t border-oase-border flex items-center justify-between gap-2 flex-wrap">
             <span class="text-[11px] text-oase-muted">Ditugaskan ke: <strong>${story.counselor_name}</strong></span>
             <div class="flex items-center gap-1.5">
@@ -427,6 +437,30 @@
       } else {
         // JIKA TIDAK ADA SARA: SEMBUNYIKAN KOTAK INFORMASI AKUN SEPENUHNYA
         if (senderAuditBox) senderAuditBox.classList.add('hidden');
+      }
+
+      // Tampilkan penilaian siswa jika sudah dinilai
+      const ratingBox = document.getElementById('modalStoryRatingBox');
+      if (ratingBox) {
+        if (story.rating) {
+          ratingBox.classList.remove('hidden');
+          ratingBox.innerHTML = `
+            <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="font-bold flex items-center gap-1.5 text-xs text-amber-900">
+                  <i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-500"></i>
+                  Penilaian Siswa atas Balasan Ini:
+                </span>
+                <span class="font-extrabold text-amber-700 bg-white px-2.5 py-0.5 rounded-lg border border-amber-200">
+                  ${'★'.repeat(story.rating)}${'☆'.repeat(5 - story.rating)} (${story.rating}/5)
+                </span>
+              </div>
+              ${story.review ? `<p class="italic text-[11px] text-amber-800 bg-white/60 p-2.5 rounded-xl border border-amber-100 leading-relaxed">"${story.review}"</p>` : ''}
+            </div>
+          `;
+        } else {
+          ratingBox.classList.add('hidden');
+        }
       }
 
       // Pre-fill existing reply if any

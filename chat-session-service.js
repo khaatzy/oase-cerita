@@ -464,6 +464,14 @@ const ChatSessionService = {
     const ratedSessions = sessions.filter(s => s.counselor_id === counselorId && s.rating);
     let totalScore = ratedSessions.reduce((acc, curr) => acc + (curr.rating || 5), 0);
     let totalCount = ratedSessions.length;
+
+    // Sertakan penilaian dari curhat anonim yang telah dinilai siswa
+    try {
+      const anonSubmissions = JSON.parse(localStorage.getItem('oase_counseling_submissions') || '[]');
+      const ratedAnon = anonSubmissions.filter(s => s.counselor_id === counselorId && s.rating);
+      totalScore += ratedAnon.reduce((acc, curr) => acc + (curr.rating || 5), 0);
+      totalCount += ratedAnon.length;
+    } catch (e) {}
     const baseCount = 5;
     const baseScore = 25;
     const avg = ((totalScore + baseScore) / (totalCount + baseCount)).toFixed(1);

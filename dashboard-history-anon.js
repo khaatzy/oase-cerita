@@ -442,6 +442,21 @@
                   <span class="flex items-center gap-1 font-bold"><i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i> Konselor telah membalas!</span>
                   <span class="text-[11px] font-bold text-emerald-700 underline flex items-center gap-0.5">Baca Jawaban &rarr;</span>
                 </div>
+                <div class="flex items-center justify-between text-xs pt-1 border-t border-gray-100 flex-wrap gap-1">
+                  ${s.rating ? `
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-amber-500 font-bold">${'★'.repeat(s.rating)}${'☆'.repeat(5 - s.rating)}</span>
+                      <span class="text-[11px] text-amber-800 font-semibold">(${s.rating}/5)</span>
+                      ${s.review ? `<span class="text-[10px] text-gray-500 italic truncate max-w-[130px]">"${s.review}"</span>` : ''}
+                    </div>
+                  ` : `
+                    <span class="text-[11px] text-amber-700 italic">Belum dinilai</span>
+                  `}
+                  <button type="button" class="open-curhat-rating-btn px-2.5 py-1 rounded-lg ${s.rating ? 'border border-amber-200 bg-white hover:bg-amber-50 text-amber-800' : 'bg-amber-500 hover:bg-amber-600 text-white'} text-[10px] font-bold transition-all flex items-center gap-1 shadow-2xs" data-ticket="${s.ticket_code}" data-counselor="${s.counselor_name || 'Konselor'}" data-rating="${s.rating || 5}" data-review="${encodeURIComponent(s.review || '')}">
+                    <i data-lucide="star" class="w-3 h-3 ${s.rating ? 'fill-amber-400 text-amber-500' : 'fill-white text-white'}"></i>
+                    <span>${s.rating ? 'Ubah Rating' : 'Beri Rating'}</span>
+                  </button>
+                </div>
               ` : `
                 <div class="text-[11px] text-amber-700 flex items-center gap-1">
                   <i data-lucide="hourglass" class="w-3 h-3"></i>
@@ -469,6 +484,17 @@
             navigator.clipboard.writeText(code).then(() => {
               alert(`Kode tiket ${code} berhasil disalin!`);
             });
+          };
+        });
+
+        curhatHistoryList.querySelectorAll('.open-curhat-rating-btn').forEach(btn => {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            const ticket = btn.dataset.ticket;
+            const counselor = btn.dataset.counselor;
+            const rVal = btn.dataset.rating || 5;
+            const revVal = btn.dataset.review ? decodeURIComponent(btn.dataset.review) : '';
+            openCurhatRating(ticket, counselor, rVal, revVal);
           };
         });
 
@@ -562,7 +588,7 @@ function openCheckModal(codeToSearch = '') {
                 </div>
 
                 ${isReplied ? `
-                  <div class="pt-2 border-t border-emerald-100 space-y-1.5">
+                  <div class="pt-2 border-t border-emerald-100 space-y-2">
                     <div class="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
                       <i data-lucide="heart-handshake" class="w-4 h-4 text-emerald-600"></i>
                       <span>Balasan Resmi dari ${data.counselor_name}:</span>
@@ -570,6 +596,37 @@ function openCheckModal(codeToSearch = '') {
                     <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-950 font-medium leading-relaxed">
                       ${data.counselor_reply}
                     </div>
+
+                    <!-- KOTAK RATING JAWABAN KONSELOR (MIRIP DENGAN KONSELING LANGSUNG) -->
+                    ${data.rating ? `
+                      <div class="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200 text-xs flex items-center justify-between gap-2 flex-wrap">
+                        <div class="space-y-0.5">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-amber-500 font-bold tracking-wider text-sm">${'★'.repeat(data.rating)}${'☆'.repeat(5 - data.rating)}</span>
+                            <span class="text-amber-900 font-bold text-xs">Penilaian Anda (${data.rating}/5)</span>
+                          </div>
+                          ${data.review ? `<p class="text-[11px] text-gray-600 italic">"${data.review}"</p>` : ''}
+                        </div>
+                        <button type="button" class="open-curhat-rating-btn px-3 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-100 text-amber-800 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer" data-ticket="${data.ticket_code}" data-counselor="${data.counselor_name}" data-rating="${data.rating}" data-review="${encodeURIComponent(data.review || '')}">
+                          <i data-lucide="edit-3" class="w-3 h-3 text-amber-600"></i>
+                          <span>Ubah Penilaian</span>
+                        </button>
+                      </div>
+                    ` : `
+                      <div class="p-3.5 bg-gradient-to-r from-amber-50/90 via-rose-50/40 to-amber-50/90 rounded-2xl border border-amber-200 text-xs flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                          <p class="font-bold text-amber-900 flex items-center gap-1">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+                            <span>Apakah tanggapan konselor ini membantumu?</span>
+                          </p>
+                          <p class="text-[11px] text-amber-700">Beri penilaian bintang & ulasan untuk ${data.counselor_name}.</p>
+                        </div>
+                        <button type="button" class="open-curhat-rating-btn px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer" data-ticket="${data.ticket_code}" data-counselor="${data.counselor_name}" data-rating="5" data-review="">
+                          <i data-lucide="star" class="w-3.5 h-3.5 fill-white text-white"></i>
+                          <span>Beri Rating</span>
+                        </button>
+                      </div>
+                    `}
                   </div>
                 ` : `
                   <div class="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
@@ -579,6 +636,16 @@ function openCheckModal(codeToSearch = '') {
                 `}
               </div>
             `;
+                        ticketResultBox.querySelectorAll('.open-curhat-rating-btn').forEach(btn => {
+              btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const ticket = btn.dataset.ticket;
+                const counselor = btn.dataset.counselor;
+                const rVal = btn.dataset.rating || 5;
+                const revVal = btn.dataset.review ? decodeURIComponent(btn.dataset.review) : '';
+                openCurhatRating(ticket, counselor, rVal, revVal);
+              });
+            });
             lucide.createIcons();
           }
         } catch (err) {
@@ -656,6 +723,104 @@ function openCheckModal(codeToSearch = '') {
         setTimeout(() => openCheckModal(ticketParam), 300);
       }
     }
+
+      // ========================================================
+      // 8. LOGIKA MODAL RATING BALASAN CURHAT ANONIM
+      // ========================================================
+      const curhatRatingModal = document.getElementById('curhatRatingModal');
+      const curhatRatingTitle = document.getElementById('curhatRatingTitle');
+      const curhatRatingSubtitle = document.getElementById('curhatRatingSubtitle');
+      const curhatStarLabel = document.getElementById('curhatStarLabel');
+      const curhatRatingReviewInput = document.getElementById('curhatRatingReviewInput');
+      const closeCurhatRatingModalBtn = document.getElementById('closeCurhatRatingModalBtn');
+      const submitCurhatRatingBtn = document.getElementById('submitCurhatRatingBtn');
+      const curhatStarBtns = document.querySelectorAll('.curhat-star-btn');
+
+      let activeRatingTicketCode = null;
+      let curhatSelectedRating = 5;
+
+      const curhatStarTexts = {
+        1: 'Kurang Membantu (1 Bintang)',
+        2: 'Cukup Membantu (2 Bintang)',
+        3: 'Baik & Membantu (3 Bintang)',
+        4: 'Sangat Baik (4 Bintang)',
+        5: 'Sangat Puas & Menenangkan (5 Bintang)'
+      };
+
+      function updateCurhatStarDisplay(val) {
+        curhatStarBtns.forEach(btn => {
+          const btnVal = parseInt(btn.getAttribute('data-val'));
+          if (btnVal <= val) {
+            btn.className = 'curhat-star-btn text-amber-400 transition-transform hover:scale-125 select-none';
+          } else {
+            btn.className = 'curhat-star-btn text-gray-300 transition-transform hover:scale-125 select-none';
+          }
+        });
+        if (curhatStarLabel) curhatStarLabel.textContent = curhatStarTexts[val] || `${val} Bintang`;
+      }
+
+      curhatStarBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          curhatSelectedRating = parseInt(btn.getAttribute('data-val')) || 5;
+          updateCurhatStarDisplay(curhatSelectedRating);
+        });
+      });
+
+      function openCurhatRating(ticketCode, counselorName, currentRating = 5, currentReview = '') {
+        activeRatingTicketCode = ticketCode;
+        curhatSelectedRating = parseInt(currentRating) || 5;
+        if (curhatRatingTitle) {
+          curhatRatingTitle.textContent = `Beri Penilaian untuk ${counselorName || 'Konselor'}`;
+        }
+        if (curhatRatingSubtitle) {
+          curhatRatingSubtitle.textContent = `Bagikan pengalamanmu terhadap balasan ${counselorName || 'konselor'} atas curhatmu.`;
+        }
+        if (curhatRatingReviewInput) {
+          curhatRatingReviewInput.value = currentReview || '';
+        }
+        updateCurhatStarDisplay(curhatSelectedRating);
+        if (curhatRatingModal) curhatRatingModal.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+      }
+
+      if (closeCurhatRatingModalBtn) {
+        closeCurhatRatingModalBtn.addEventListener('click', () => {
+          if (curhatRatingModal) curhatRatingModal.classList.add('hidden');
+        });
+      }
+
+      if (submitCurhatRatingBtn) {
+        submitCurhatRatingBtn.addEventListener('click', async () => {
+          if (!activeRatingTicketCode) return;
+          submitCurhatRatingBtn.disabled = true;
+          submitCurhatRatingBtn.innerHTML = `
+            <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>
+            <span>Menyimpan...</span>
+          `;
+          if (window.lucide) lucide.createIcons();
+
+          try {
+            const review = curhatRatingReviewInput ? curhatRatingReviewInput.value.trim() : '';
+            await window.CounselingService.rateSubmission(activeRatingTicketCode, curhatSelectedRating, review);
+            alert(`Terima kasih banyak! Penilaian ${curhatSelectedRating} bintang berhasil disimpan untuk konselor.`);
+            if (curhatRatingModal) curhatRatingModal.classList.add('hidden');
+
+            if (searchTicketInput && searchTicketInput.value.trim().toUpperCase() === activeRatingTicketCode) {
+              searchTicket();
+            }
+            await renderCurhatHistoryList();
+          } catch(err) {
+            alert('Gagal menyimpan rating: ' + (err.message || 'Terjadi kesalahan'));
+          } finally {
+            submitCurhatRatingBtn.disabled = false;
+            submitCurhatRatingBtn.innerHTML = `
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              <span>Simpan Rating</span>
+            `;
+            if (window.lucide) lucide.createIcons();
+          }
+        });
+      }
 
     window.setupAnonCurhat = (user) => { if (user) currentUser = user; setupAnonCurhat(); };
     window.loadCompletedSessions = async (user) => { if (user) currentUser = user; await loadCompletedSessions(); };

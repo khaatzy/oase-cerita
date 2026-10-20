@@ -85,6 +85,9 @@ USING (true);
 -- Skrip Tambahan Kolom Audit Keamanan (Jalankan di SQL Editor jika ingin kolom terpisah):
 -- ALTER TABLE public.counseling_submissions ADD COLUMN IF NOT EXISTS user_email TEXT;
 -- ALTER TABLE public.counseling_submissions ADD COLUMN IF NOT EXISTS flagged_words TEXT;
+-- ALTER TABLE public.counseling_submissions ADD COLUMN IF NOT EXISTS rating INT;
+-- ALTER TABLE public.counseling_submissions ADD COLUMN IF NOT EXISTS review TEXT;
+-- ALTER TABLE public.counseling_submissions ADD COLUMN IF NOT EXISTS rated_at TIMESTAMP WITH TIME ZONE;
 
 -- Data Awal Antrean Curhat untuk Pengujian Konselor
 INSERT INTO public.counseling_submissions 

@@ -956,6 +956,10 @@ const CounselingService = {
     const userEmail = hasViolation ? (item.user_email || auditData.user_email || null) : null;
     const userRealName = hasViolation ? (item.real_name || auditData.real_name || null) : null;
 
+    const rating = item.rating || auditData.rating || null;
+    const review = item.review || auditData.review || null;
+    const ratedAt = item.rated_at || auditData.rated_at || null;
+
     return {
       ...item,
       counselor_name: name,
@@ -988,7 +992,19 @@ const CounselingService = {
           .eq('ticket_code', cleanCode)
           .single();
 
-        if (!error && data) return this._resolveSubmission(data);
+        if (!error && data) {
+          const resolved = this._resolveSubmission(data);
+          try {
+            const myStories = JSON.parse(localStorage.getItem('oase_my_anon_stories') || '[]');
+            const localMatch = myStories.find(s => s.ticket_code === cleanCode);
+            if (localMatch && localMatch.rating && !resolved.rating) {
+              resolved.rating = localMatch.rating;
+              resolved.review = localMatch.review;
+              resolved.rated_at = localMatch.rated_at;
+            }
+          } catch(e) {}
+          return resolved;
+        }
       } catch (e) {}
     }
 
@@ -1034,6 +1050,12 @@ const CounselingService = {
           if (!error && data) {
             data.forEach(item => {
               const res = this._resolveSubmission(item);
+              const existing = storiesMap.get(res.ticket_code);
+              if (existing && existing.rating && !res.rating) {
+                res.rating = existing.rating;
+                res.review = existing.review;
+                res.rated_at = existing.rated_at;
+              }
               storiesMap.set(res.ticket_code, res);
             });
           }
@@ -1051,6 +1073,12 @@ const CounselingService = {
           if (!error && data) {
             data.forEach(item => {
               const res = this._resolveSubmission(item);
+              const existing = storiesMap.get(res.ticket_code);
+              if (existing && existing.rating && !res.rating) {
+                res.rating = existing.rating;
+                res.review = existing.review;
+                res.rated_at = existing.rated_at;
+              }
               storiesMap.set(res.ticket_code, res);
             });
           }
@@ -1081,6 +1109,98 @@ const CounselingService = {
     const result = Array.from(storiesMap.values());
     result.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     return result;
+  },
+
+  // Berikan rating & ulasan untuk balasan konselor atas curhat anonim (mirip konseling langsung)
+  async rateSubmission(ticketCode, rating, reviewText = '') {
+    if (!ticketCode) throw new Error('Kode tiket tidak valid.');
+    const cleanCode = ticketCode.trim().toUpperCase();
+    const starNum = Math.min(5, Math.max(1, parseInt(rating) || 5));
+    const now = new Date().toISOString();
+    let counselorId = null;
+
+    // 1. Coba update kolom rating & review di Supabase
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('counseling_submissions')
+          .update({
+            rating: starNum,
+            review: reviewText.trim(),
+            rated_at: now
+          })
+          .eq('ticket_code', cleanCode)
+          .select();
+
+        if (!error && data && data.length > 0) {
+          counselorId = data[0].counselor_id;
+        } else if (error) {
+          // Fallback jika kolom rating belum ditambahkan ke schema Supabase
+          try {
+            const { data: curData } = await supabaseClient
+              .from('counseling_submissions')
+              .select('*')
+              .eq('ticket_code', cleanCode)
+              .maybeSingle();
+
+            if (curData) {
+              counselorId = curData.counselor_id;
+              let meta = {};
+              try {
+                if (curData.transfer_reason && curData.transfer_reason.startsWith('{')) {
+                  meta = JSON.parse(curData.transfer_reason);
+                }
+              } catch(e) {}
+              meta.rating = starNum;
+              meta.review = reviewText.trim();
+              meta.rated_at = now;
+
+              await supabaseClient
+                .from('counseling_submissions')
+                .update({ transfer_reason: JSON.stringify(meta) })
+                .eq('ticket_code', cleanCode);
+            }
+          } catch(err2) {
+            console.warn('Fallback update rating Supabase error:', err2);
+          }
+        }
+      } catch (e) {
+        console.warn('Gagal update rating ke Supabase:', e);
+      }
+    }
+
+    // 2. Simpan di localStorage 'oase_counseling_submissions'
+    try {
+      const local = JSON.parse(localStorage.getItem('oase_counseling_submissions') || '[]');
+      const idx = local.findIndex(s => s.ticket_code === cleanCode);
+      if (idx !== -1) {
+        local[idx].rating = starNum;
+        local[idx].review = reviewText.trim();
+        local[idx].rated_at = now;
+        if (!counselorId) counselorId = local[idx].counselor_id;
+        localStorage.setItem('oase_counseling_submissions', JSON.stringify(local));
+      }
+    } catch(e) {}
+
+    // 3. Simpan di localStorage 'oase_my_anon_stories'
+    try {
+      const myStories = JSON.parse(localStorage.getItem('oase_my_anon_stories') || '[]');
+      const myIdx = myStories.findIndex(s => s.ticket_code === cleanCode);
+      if (myIdx !== -1) {
+        myStories[myIdx].rating = starNum;
+        myStories[myIdx].review = reviewText.trim();
+        myStories[myIdx].rated_at = now;
+        if (!counselorId) counselorId = myStories[myIdx].counselor_id;
+        localStorage.setItem('oase_my_anon_stories', JSON.stringify(myStories));
+      }
+    } catch(e) {}
+
+    // 4. Hitung ulang rating konselor secara real-time
+    if (counselorId && window.ChatSessionService && typeof window.ChatSessionService.recalculateCounselorRating === 'function') {
+      window.ChatSessionService.recalculateCounselorRating(counselorId);
+    }
+
+    return { success: true, ticketCode: cleanCode, rating: starNum, review: reviewText.trim(), rated_at: now };
   },
 
   // Dapatkan seluruh antrean cerita konseling (filter kategori & status)

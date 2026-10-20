@@ -584,6 +584,55 @@
     </div>
   </div>
 
+    <!-- ======================================================== -->
+  <!-- MODAL: RATING BALASAN CURHAT ANONIM (MIRIP KONSELING)     -->
+  <!-- ======================================================== -->
+  <div id="curhatRatingModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-oase-plum/70 backdrop-blur-md hidden animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 border border-heather-200 shadow-2xl relative space-y-4 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-sm">
+        <i data-lucide="star" class="w-6 h-6 fill-amber-400"></i>
+      </div>
+
+      <div class="space-y-1">
+        <h3 id="curhatRatingTitle" class="text-lg font-bold text-oase-plum">Beri Penilaian Konselor</h3>
+        <p id="curhatRatingSubtitle" class="text-xs text-oase-muted">Bagikan pengalamanmu terhadap balasan konselor untuk membantu meningkatkan mutu layanan OASE.</p>
+      </div>
+
+      <!-- Star Rating Interactive Selector -->
+      <div class="py-2">
+        <div id="curhatStarContainer" class="flex items-center justify-center gap-2 text-3xl cursor-pointer">
+          <span class="curhat-star-btn text-amber-400 transition-transform hover:scale-125 select-none" data-val="1">★</span>
+          <span class="curhat-star-btn text-amber-400 transition-transform hover:scale-125 select-none" data-val="2">★</span>
+          <span class="curhat-star-btn text-amber-400 transition-transform hover:scale-125 select-none" data-val="3">★</span>
+          <span class="curhat-star-btn text-amber-400 transition-transform hover:scale-125 select-none" data-val="4">★</span>
+          <span class="curhat-star-btn text-amber-400 transition-transform hover:scale-125 select-none" data-val="5">★</span>
+        </div>
+        <p id="curhatStarLabel" class="text-xs font-bold text-amber-700 mt-1.5">Sangat Puas & Membantu (5 Bintang)</p>
+      </div>
+
+      <!-- Review Input -->
+      <div>
+        <textarea 
+          id="curhatRatingReviewInput" 
+          rows="2" 
+          placeholder="Tulis ulasan atau tanggapan singkat (opsional)..." 
+          class="w-full p-3 rounded-2xl border border-oase-border bg-oase-surface/50 text-xs focus:outline-none focus:border-heather-500 focus:bg-white resize-none"
+        ></textarea>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2 pt-1">
+        <button id="closeCurhatRatingModalBtn" type="button" class="flex-1 py-2.5 rounded-xl border border-oase-border hover:bg-heather-50 text-xs font-semibold text-oase-muted transition-all">
+          Batal
+        </button>
+        <button id="submitCurhatRatingBtn" type="button" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          <span>Simpan Rating</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ======================================================== -->
   <!-- MODAL: KONTAK DARURAT & LAPOR BUG                        -->
   <!-- ======================================================== -->

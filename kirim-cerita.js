@@ -383,11 +383,26 @@
             </p>
 
             ${isReplied ? `
-              <div class="p-2.5 rounded-xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between">
-                <span class="flex items-center gap-1 font-bold"><i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i> Konselor telah membalas!</span>
-                <span class="text-[11px] font-bold text-emerald-700 underline flex items-center gap-0.5">Baca Jawaban &rarr;</span>
-              </div>
-            ` : `
+                <div class="p-2.5 rounded-xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between">
+                  <span class="flex items-center gap-1 font-bold"><i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i> Konselor telah membalas!</span>
+                  <span class="text-[11px] font-bold text-emerald-700 underline flex items-center gap-0.5">Baca Jawaban &rarr;</span>
+                </div>
+                <div class="flex items-center justify-between text-xs pt-1 border-t border-gray-100 flex-wrap gap-1">
+                  ${s.rating ? `
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-amber-500 font-bold">${'★'.repeat(s.rating)}${'☆'.repeat(5 - s.rating)}</span>
+                      <span class="text-[11px] text-amber-800 font-semibold">(${s.rating}/5)</span>
+                      ${s.review ? `<span class="text-[10px] text-gray-500 italic truncate max-w-[130px]">"${s.review}"</span>` : ''}
+                    </div>
+                  ` : `
+                    <span class="text-[11px] text-amber-700 italic">Belum dinilai</span>
+                  `}
+                  <button type="button" class="open-curhat-rating-btn px-2.5 py-1 rounded-lg ${s.rating ? 'border border-amber-200 bg-white hover:bg-amber-50 text-amber-800' : 'bg-amber-500 hover:bg-amber-600 text-white'} text-[10px] font-bold transition-all flex items-center gap-1 shadow-2xs" data-ticket="${s.ticket_code}" data-counselor="${s.counselor_name || 'Konselor'}" data-rating="${s.rating || 5}" data-review="${encodeURIComponent(s.review || '')}">
+                    <i data-lucide="star" class="w-3 h-3 ${s.rating ? 'fill-amber-400 text-amber-500' : 'fill-white text-white'}"></i>
+                    <span>${s.rating ? 'Ubah Rating' : 'Beri Rating'}</span>
+                  </button>
+                </div>
+              ` : `
               <div class="text-[11px] text-amber-700 flex items-center gap-1">
                 <i data-lucide="hourglass" class="w-3 h-3"></i>
                 <span>Sedang dalam antrean penelaahan konselor</span>
@@ -407,13 +422,24 @@
         };
       });
 
-      curhatHistoryList.querySelectorAll('.copy-curhat-ticket-btn').forEach(btn => {
+            curhatHistoryList.querySelectorAll('.copy-curhat-ticket-btn').forEach(btn => {
         btn.onclick = (e) => {
           e.stopPropagation();
           const code = btn.dataset.code;
           navigator.clipboard.writeText(code).then(() => {
             alert(`Kode tiket ${code} berhasil disalin!`);
           });
+        };
+      });
+
+      curhatHistoryList.querySelectorAll('.open-curhat-rating-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const ticket = btn.dataset.ticket;
+          const counselor = btn.dataset.counselor;
+          const rVal = btn.dataset.rating || 5;
+          const revVal = btn.dataset.review ? decodeURIComponent(btn.dataset.review) : '';
+          openCurhatRating(ticket, counselor, rVal, revVal);
         };
       });
 
@@ -498,14 +524,45 @@
               </div>
 
               ${isReplied ? `
-                <div class="pt-2 border-t border-emerald-100">
-                  <div class="flex items-center gap-1.5 text-xs font-bold text-emerald-800 mb-1">
+                <div class="pt-2 border-t border-emerald-100 space-y-2">
+                  <div class="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
                     <i data-lucide="message-circle" class="w-4 h-4 text-emerald-600"></i>
                     <span>Tanggapan dari ${data.counselor_name}:</span>
                   </div>
-                  <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-950 font-medium leading-relaxed">
+                  <div class="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-950 font-medium leading-relaxed">
                     ${data.counselor_reply}
                   </div>
+
+                  <!-- KOTAK RATING JAWABAN KONSELOR (MIRIP DENGAN KONSELING LANGSUNG) -->
+                  ${data.rating ? `
+                    <div class="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200 text-xs flex items-center justify-between gap-2 flex-wrap">
+                      <div class="space-y-0.5">
+                        <div class="flex items-center gap-1.5">
+                          <span class="text-amber-500 font-bold tracking-wider text-sm">${'★'.repeat(data.rating)}${'☆'.repeat(5 - data.rating)}</span>
+                          <span class="text-amber-900 font-bold text-xs">Penilaian Anda (${data.rating}/5)</span>
+                        </div>
+                        ${data.review ? `<p class="text-[11px] text-gray-600 italic">"${data.review}"</p>` : ''}
+                      </div>
+                      <button type="button" class="open-curhat-rating-btn px-3 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-100 text-amber-800 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer" data-ticket="${data.ticket_code}" data-counselor="${data.counselor_name}" data-rating="${data.rating}" data-review="${encodeURIComponent(data.review || '')}">
+                        <i data-lucide="edit-3" class="w-3 h-3 text-amber-600"></i>
+                        <span>Ubah Penilaian</span>
+                      </button>
+                    </div>
+                  ` : `
+                    <div class="p-3.5 bg-gradient-to-r from-amber-50/90 via-rose-50/40 to-amber-50/90 rounded-2xl border border-amber-200 text-xs flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <p class="font-bold text-amber-900 flex items-center gap-1">
+                          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+                          <span>Apakah tanggapan konselor ini membantumu?</span>
+                        </p>
+                        <p class="text-[11px] text-amber-700">Beri penilaian bintang & ulasan untuk ${data.counselor_name}.</p>
+                      </div>
+                      <button type="button" class="open-curhat-rating-btn px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer" data-ticket="${data.ticket_code}" data-counselor="${data.counselor_name}" data-rating="5" data-review="">
+                        <i data-lucide="star" class="w-3.5 h-3.5 fill-white text-white"></i>
+                        <span>Beri Rating</span>
+                      </button>
+                    </div>
+                  `}
                 </div>
               ` : `
                 <div class="p-3 bg-amber-50/70 rounded-xl border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
@@ -515,6 +572,16 @@
               `}
             </div>
           `;
+                    ticketResultBox.querySelectorAll('.open-curhat-rating-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const ticket = btn.dataset.ticket;
+              const counselor = btn.dataset.counselor;
+              const rVal = btn.dataset.rating || 5;
+              const revVal = btn.dataset.review ? decodeURIComponent(btn.dataset.review) : '';
+              openCurhatRating(ticket, counselor, rVal, revVal);
+            });
+          });
           lucide.createIcons();
         }
       } catch (err) {
