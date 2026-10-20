@@ -172,9 +172,12 @@
             <span id="statTotalCount" class="text-xl sm:text-2xl font-black text-heather-600 block">0</span>
             <span class="text-[10px] sm:text-[11px] font-semibold text-oase-muted">Total Kasus</span>
           </div>
-          <div class="bg-white p-3.5 rounded-2xl border border-oase-border text-center shadow-xs">
-            <span id="statCounselorRating" class="text-xl sm:text-2xl font-black text-amber-500 block">⭐ 5.0</span>
-            <span class="text-[10px] sm:text-[11px] font-semibold text-oase-muted">Rating Kinerja</span>
+          <div id="statCounselorRatingCard" class="bg-white p-3.5 rounded-2xl border border-oase-border hover:border-amber-300 text-center shadow-xs cursor-pointer transition-all hover:bg-amber-50/40 group" title="Klik untuk melihat semua daftar ulasan & penilaian siswa">
+            <span id="statCounselorRating" class="text-xl sm:text-2xl font-black text-amber-500 block group-hover:scale-105 transition-transform">⭐ 5.0</span>
+            <span class="text-[10px] sm:text-[11px] font-semibold text-oase-muted flex items-center justify-center gap-1">
+              <span>Rating Kinerja</span>
+              <i data-lucide="chevron-right" class="w-3 h-3 text-amber-500"></i>
+            </span>
           </div>
         </div>
       </div>
@@ -720,6 +723,42 @@
   <script src="notification-service.js"></script>
   <script src="supabaseClient.js"></script>
   <script src="laman-konselor.js"></script>
+  <!-- ======================================================== -->
+  <!-- MODAL: DAFTAR SEMUA ULASAN & PENILAIAN SISWA              -->
+  <!-- ======================================================== -->
+  <div id="counselorReviewsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-oase-plum/70 backdrop-blur-md hidden animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 border border-heather-200 shadow-2xl relative space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-oase-border flex-shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-2xs">
+            <i data-lucide="star" class="w-5 h-5 fill-amber-400"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-oase-plum">Penilaian & Ulasan Siswa</h3>
+            <p class="text-xs text-oase-muted">Daftar rating dan alasan ulasan dari siswa (nama user anonim: s***a)</p>
+          </div>
+        </div>
+        <button id="closeCounselorReviewsModalBtn" type="button" class="p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors" title="Tutup">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Container List Ulasan -->
+      <div id="counselorReviewsContainer" class="space-y-3 overflow-y-auto flex-1 pr-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 flex-shrink-0">
+        <span class="flex items-center gap-1 text-emerald-700 font-semibold">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+          Identitas Siswa Dilindungi (s***a)
+        </span>
+        <button id="closeCounselorReviewsFooterBtn" type="button" class="px-4 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold text-xs transition-all">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
 

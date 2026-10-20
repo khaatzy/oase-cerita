@@ -445,17 +445,41 @@
         if (story.rating) {
           ratingBox.classList.remove('hidden');
           ratingBox.innerHTML = `
-            <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span class="font-bold flex items-center gap-1.5 text-xs text-amber-900">
-                  <i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-500"></i>
-                  Penilaian Siswa atas Balasan Ini:
-                </span>
-                <span class="font-extrabold text-amber-700 bg-white px-2.5 py-0.5 rounded-lg border border-amber-200">
-                  ${'★'.repeat(story.rating)}${'☆'.repeat(5 - story.rating)} (${story.rating}/5)
+            <div class="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-rose-50/30 to-amber-50 border border-amber-200 text-xs text-amber-950 space-y-3">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold shadow-2xs">
+                    <i data-lucide="star" class="w-5 h-5 fill-amber-400"></i>
+                  </div>
+                  <div>
+                    <span class="font-extrabold text-sm text-amber-900 block">
+                      Rating Siswa: ${'★'.repeat(story.rating)}${'☆'.repeat(5 - story.rating)} (${story.rating}/5 Bintang)
+                    </span>
+                    <span class="text-[10px] text-amber-700 font-medium">Evaluasi atas tanggapan yang Anda berikan</span>
+                  </div>
+                </div>
+                <span class="px-3 py-1 rounded-lg bg-white border border-amber-200 font-bold text-xs text-rose-900 shadow-2xs font-mono">
+                  Nama User: <strong>s***a</strong>
                 </span>
               </div>
-              ${story.review ? `<p class="italic text-[11px] text-amber-800 bg-white/60 p-2.5 rounded-xl border border-amber-100 leading-relaxed">"${story.review}"</p>` : ''}
+              <div class="p-3 rounded-xl bg-white/95 border border-amber-100 text-xs space-y-1">
+                <span class="font-bold text-[10px] text-amber-800 uppercase tracking-wider block flex items-center gap-1">
+                  <i data-lucide="message-square" class="w-3.5 h-3.5 text-amber-600"></i> Alasan Siswa:
+                </span>
+                <p class="italic text-gray-800 leading-relaxed font-medium">
+                  ${story.review ? `"${story.review}"` : '<span class="text-gray-400 font-normal">(Siswa memberikan bintang rating tanpa ulasan teks)</span>'}
+                </p>
+              </div>
+            </div>
+          `;
+        } else if (story.status === 'sudah_dibalas') {
+          ratingBox.classList.remove('hidden');
+          ratingBox.innerHTML = `
+            <div class="p-3.5 rounded-2xl bg-gray-50 border border-gray-200 text-xs flex items-center justify-between gap-2 flex-wrap">
+              <span class="text-gray-500 flex items-center gap-1.5 font-medium">
+                <i data-lucide="clock" class="w-4 h-4 text-gray-400"></i> Belum ada rating atau ulasan dari siswa untuk tiket ini.
+              </span>
+              <span class="font-bold text-gray-600 bg-white px-2.5 py-0.5 rounded-md border border-gray-200 font-mono text-[11px]">Nama User: s***a</span>
             </div>
           `;
         } else {
@@ -922,7 +946,7 @@
             ${timeInfo}
           </div>
           <div class="flex items-center gap-2">
-            <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA/Krisis terdeteksi)">${s.user_email}</span>` : ''}
+            <h3 class="text-sm font-extrabold text-oase-plum">s***a</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA/Krisis terdeteksi)">${s.user_email}</span>` : ''}
             <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold">🔒 Anonim</span>
           </div>
           <p class="text-xs text-heather-700 font-semibold bg-heather-50 p-2 rounded-xl border border-heather-100">Topik: ${s.topic}</p>
@@ -1017,7 +1041,7 @@
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h3 class="text-sm font-extrabold text-oase-plum">${s.user_name || 'Siswa Anonim'}</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA/Krisis terdeteksi)">${s.user_email}</span>` : ''}
+                <h3 class="text-sm font-extrabold text-oase-plum">s***a</h3>${(s.has_sara || s.flagged_words) && s.user_email ? `<span class="text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200" title="Email terdaftar siswa (SARA/Krisis terdeteksi)">${s.user_email}</span>` : ''}
                 <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold">🔒 Anonim</span>
               </div>
               <p class="text-xs text-heather-700 font-semibold mt-0.5">Topik: ${s.topic}</p>
@@ -1118,7 +1142,114 @@
       });
     }
 
-    // Run on start
+    // ========================================================
+    // MODAL SEMUA ULASAN & PENILAIAN SISWA
+    // ========================================================
+    const statCounselorRatingCard = document.getElementById('statCounselorRatingCard');
+    const counselorReviewsModal = document.getElementById('counselorReviewsModal');
+    const closeCounselorReviewsModalBtn = document.getElementById('closeCounselorReviewsModalBtn');
+    const closeCounselorReviewsFooterBtn = document.getElementById('closeCounselorReviewsFooterBtn');
+    const counselorReviewsContainer = document.getElementById('counselorReviewsContainer');
+
+    function openAllReviewsModal() {
+      if (!counselorReviewsModal || !counselorReviewsContainer) return;
+      counselorReviewsModal.classList.remove('hidden');
+
+      const reviews = [];
+
+      // 1. Kumpulkan dari curhat antrean yang sudah dijawab & dinilai
+      if (Array.isArray(allQueueStories)) {
+        allQueueStories.forEach(s => {
+          if (s.counselor_id === currentSession.id && s.rating) {
+            reviews.push({
+              source: 'Curhat Anonim',
+              ticket: s.ticket_code,
+              category: s.category,
+              rating: s.rating,
+              review: s.review,
+              userName: 's***a',
+              date: s.rated_at || s.replied_at || s.created_at
+            });
+          }
+        });
+      }
+
+      // 2. Kumpulkan dari sesi konseling live yang sudah selesai
+      try {
+        const liveSessions = JSON.parse(localStorage.getItem('oase_counseling_sessions') || '[]');
+        liveSessions.forEach(s => {
+          if (s.counselor_id === currentSession.id && s.rating) {
+            reviews.push({
+              source: 'Konseling Live 30 Menit',
+              ticket: `Sesi #${s.id.substring(0, 8)}`,
+              category: s.topic,
+              rating: s.rating,
+              review: s.review,
+              userName: 's***a',
+              date: s.rated_at || s.ended_at || s.scheduled_at
+            });
+          }
+        });
+      } catch(e) {}
+
+      reviews.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+      if (reviews.length === 0) {
+        counselorReviewsContainer.innerHTML = `
+          <div class="p-8 rounded-2xl border-2 border-dashed border-gray-200 text-center space-y-2 bg-gray-50/50">
+            <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto">
+              <i data-lucide="star" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs font-semibold text-gray-700">Belum ada ulasan siswa yang masuk</p>
+            <p class="text-[11px] text-gray-400">Setiap siswa yang memberikan rating dan alasan ulasan akan tercatat rapi di sini.</p>
+          </div>
+        `;
+      } else {
+        counselorReviewsContainer.innerHTML = reviews.map(r => {
+          const dateStr = r.date ? new Date(r.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Baru saja';
+          return `
+            <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-2.5">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-amber-500 font-bold text-sm tracking-wider">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+                  <span class="font-bold text-xs text-amber-900">(${r.rating}/5)</span>
+                  <span class="text-[10px] font-semibold text-heather-700 bg-white px-2 py-0.5 rounded-md border border-heather-200">${r.source}</span>
+                </div>
+                <span class="text-[11px] font-bold text-rose-900 bg-white px-2.5 py-0.5 rounded-md border border-gray-200 font-mono shadow-2xs">
+                  Nama User: s***a
+                </span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white border border-amber-100 text-xs space-y-1">
+                <span class="font-bold text-[10px] text-amber-800 uppercase tracking-wider block">Alasan Siswa:</span>
+                <p class="italic text-gray-800 leading-relaxed">${r.review ? `"${r.review}"` : '<span class="text-gray-400 font-normal">(Siswa memberikan rating tanpa pesan ulasan tambahan)</span>'}</p>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-gray-400 pt-1">
+                <span>Kategori: <strong>${r.category}</strong></span>
+                <span>${dateStr}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    if (statCounselorRatingCard) {
+      statCounselorRatingCard.addEventListener('click', openAllReviewsModal);
+    }
+    if (closeCounselorReviewsModalBtn) {
+      closeCounselorReviewsModalBtn.addEventListener('click', () => {
+        if (counselorReviewsModal) counselorReviewsModal.classList.add('hidden');
+      });
+    }
+    if (closeCounselorReviewsFooterBtn) {
+      closeCounselorReviewsFooterBtn.addEventListener('click', () => {
+        if (counselorReviewsModal) counselorReviewsModal.classList.add('hidden');
+      });
+    }
+
+        // Run on start
     checkAuth();
     loadCounselorNotifs();
     loadLiveSessions();

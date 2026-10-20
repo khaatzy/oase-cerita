@@ -598,6 +598,110 @@
       }
     });
 
+    window.renderCurhatHistoryList = renderCurhatHistoryList;
+
+    // ========================================================
+    // LOGIKA MODAL RATING BALASAN CURHAT ANONIM
+    // ========================================================
+    const curhatRatingModal = document.getElementById('curhatRatingModal');
+    const curhatRatingTitle = document.getElementById('curhatRatingTitle');
+    const curhatRatingSubtitle = document.getElementById('curhatRatingSubtitle');
+    const curhatStarLabel = document.getElementById('curhatStarLabel');
+    const curhatRatingReviewInput = document.getElementById('curhatRatingReviewInput');
+    const closeCurhatRatingModalBtn = document.getElementById('closeCurhatRatingModalBtn');
+    const submitCurhatRatingBtn = document.getElementById('submitCurhatRatingBtn');
+    const curhatStarBtns = document.querySelectorAll('.curhat-star-btn');
+
+    let activeRatingTicketCode = null;
+    let curhatSelectedRating = 5;
+
+    const curhatStarTexts = {
+      1: 'Kurang Membantu (1 Bintang)',
+      2: 'Cukup Membantu (2 Bintang)',
+      3: 'Baik & Membantu (3 Bintang)',
+      4: 'Sangat Baik (4 Bintang)',
+      5: 'Sangat Puas & Menenangkan (5 Bintang)'
+    };
+
+    function updateCurhatStarDisplay(val) {
+      curhatStarBtns.forEach(btn => {
+        const btnVal = parseInt(btn.getAttribute('data-val'));
+        if (btnVal <= val) {
+          btn.className = 'curhat-star-btn text-amber-400 transition-transform hover:scale-125 select-none';
+        } else {
+          btn.className = 'curhat-star-btn text-gray-300 transition-transform hover:scale-125 select-none';
+        }
+      });
+      if (curhatStarLabel) curhatStarLabel.textContent = curhatStarTexts[val] || `${val} Bintang`;
+    }
+
+    curhatStarBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        curhatSelectedRating = parseInt(btn.getAttribute('data-val')) || 5;
+        updateCurhatStarDisplay(curhatSelectedRating);
+      });
+    });
+
+    function openCurhatRating(ticketCode, counselorName, currentRating = 5, currentReview = '') {
+      activeRatingTicketCode = ticketCode;
+      curhatSelectedRating = parseInt(currentRating) || 5;
+      if (curhatRatingTitle) {
+        curhatRatingTitle.textContent = `Beri Penilaian untuk ${counselorName || 'Konselor'}`;
+      }
+      if (curhatRatingSubtitle) {
+        curhatRatingSubtitle.textContent = `Bagikan pengalamanmu terhadap balasan ${counselorName || 'konselor'} atas curhatmu.`;
+      }
+      if (curhatRatingReviewInput) {
+        curhatRatingReviewInput.value = currentReview || '';
+      }
+      updateCurhatStarDisplay(curhatSelectedRating);
+      if (curhatRatingModal) curhatRatingModal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    if (closeCurhatRatingModalBtn) {
+      closeCurhatRatingModalBtn.addEventListener('click', () => {
+        if (curhatRatingModal) curhatRatingModal.classList.add('hidden');
+      });
+    }
+
+    if (submitCurhatRatingBtn) {
+      submitCurhatRatingBtn.addEventListener('click', async () => {
+        if (!activeRatingTicketCode) return;
+        submitCurhatRatingBtn.disabled = true;
+        submitCurhatRatingBtn.innerHTML = `
+          <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>
+          <span>Menyimpan...</span>
+        `;
+        if (window.lucide) lucide.createIcons();
+
+        try {
+          const review = curhatRatingReviewInput ? curhatRatingReviewInput.value.trim() : '';
+          await window.CounselingService.rateSubmission(activeRatingTicketCode, curhatSelectedRating, review);
+          alert(`Terima kasih banyak! Penilaian ${curhatSelectedRating} bintang berhasil disimpan untuk konselor.`);
+          if (curhatRatingModal) curhatRatingModal.classList.add('hidden');
+
+          if (searchTicketInput && searchTicketInput.value.trim().toUpperCase() === activeRatingTicketCode) {
+            searchTicketBtn.click();
+          }
+          if (typeof renderCurhatHistoryList === 'function') {
+            await renderCurhatHistoryList();
+          } else if (typeof window.renderCurhatHistoryList === 'function') {
+            await window.renderCurhatHistoryList();
+          }
+        } catch(err) {
+          alert('Gagal menyimpan rating: ' + (err.message || 'Terjadi kesalahan'));
+        } finally {
+          submitCurhatRatingBtn.disabled = false;
+          submitCurhatRatingBtn.innerHTML = `
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Simpan Rating</span>
+          `;
+          if (window.lucide) lucide.createIcons();
+        }
+      });
+    }
+
     // Close modal on click outside
     window.addEventListener('click', (e) => {
       if (e.target === checkTicketModal) checkTicketModal.classList.add('hidden');

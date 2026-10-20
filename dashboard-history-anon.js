@@ -722,10 +722,11 @@ function openCheckModal(codeToSearch = '') {
         const ticketParam = urlParams.get('ticket') || '';
         setTimeout(() => openCheckModal(ticketParam), 300);
       }
-    }
+
+      window.renderCurhatHistoryList = renderCurhatHistoryList;
 
       // ========================================================
-      // 8. LOGIKA MODAL RATING BALASAN CURHAT ANONIM
+      // 8. LOGIKA MODAL RATING BALASAN CURHAT ANONIM (DALAM SCOPE)
       // ========================================================
       const curhatRatingModal = document.getElementById('curhatRatingModal');
       const curhatRatingTitle = document.getElementById('curhatRatingTitle');
@@ -808,7 +809,11 @@ function openCheckModal(codeToSearch = '') {
             if (searchTicketInput && searchTicketInput.value.trim().toUpperCase() === activeRatingTicketCode) {
               searchTicket();
             }
-            await renderCurhatHistoryList();
+            if (typeof renderCurhatHistoryList === 'function') {
+              await renderCurhatHistoryList();
+            } else if (typeof window.renderCurhatHistoryList === 'function') {
+              await window.renderCurhatHistoryList();
+            }
           } catch(err) {
             alert('Gagal menyimpan rating: ' + (err.message || 'Terjadi kesalahan'));
           } finally {
@@ -821,6 +826,7 @@ function openCheckModal(codeToSearch = '') {
           }
         });
       }
+    }
 
     window.setupAnonCurhat = (user) => { if (user) currentUser = user; setupAnonCurhat(); };
     window.loadCompletedSessions = async (user) => { if (user) currentUser = user; await loadCompletedSessions(); };
