@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /laman-moderator.html
+
+Sitemap: https://proyek-oase-anvapro.vercel.app/sitemap.xml
